@@ -99,11 +99,11 @@ def solveStreamtube(U_inf, mu_1, mu_2, delta_mu, mu_root, mu_tip, Omega, R, N_B,
             #print(i)
             break
 
-    return [mu, a_new, aline, alpha, phi, df_axial, df_tan, gamma, CL, CD]
+    return [mu, a_new, aline, alpha, phi, df_axial, df_tan, gamma, CL, CD, alpha]
 
 
 def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
-    # USES BIOT-SAVART LAW TO COMPUTE INDUCED VELOCITIES U, V AND W
+    # USES BIOS-SAVART LAW TO COMPUTE INDUCED VELOCITIES U, V AND W
     # AT A TARGET POINT XVP1 FROM A VORTEX FILAMENT OF RADIUS RV AND
     # PASSING THROUGH POINTS XV1 AND XV2
     X1 = XV1[0]; Y1 = XV1[1]; Z1 = XV1[2]
@@ -134,3 +134,25 @@ def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
     W = K * R1XR2_Z
 
     return U, V, W
+
+def downstreamLine(r, theta, chord, alpha, Uax, Utan, R, Loutlet, dx):
+    # this function discretizes a vorticity line
+    N = int(Loutlet * R / dx) # number of points along each line
+    thetas = np.zeros((N)); rs = np.ones((N)) * r; xs = np.empty((N))
+    # compute the first two points along the chord
+    thetas[0] = theta
+    thetas[1] = theta + np.sin(alpha)*chord / r
+    xs[0] = 0; xs[1] = chord*np.cos(alpha)
+    # compute the rest of the downstream vortex lines
+    dtheta = dx * Utan/Uax / r 
+    xs[2:] = xs[1] + np.arange(1,N-1) * dx
+    thetas[2:] = thetas[1] + np.arange(1,N-1) * dtheta
+    coords = np.vstack([xs, rs, thetas])
+    return coords #[x,r,theta]
+
+def cyl2cart(arr): # array must be shaped as [ndim, npoints], with ndim = [x r theta]
+    newarr = arr * 0
+    newarr[0,:] = arr[0,:]
+    newarr[1,:] = np.sin(arr[2,:])*arr[1,:] #y - coordinate
+    newarr[2,:] = -np.cos(arr[2,:])*arr[1,:] #z - cordinate
+    return newarr #now x-y-z
