@@ -133,20 +133,20 @@ def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
     V = K * R1XR2_Y
     W = K * R1XR2_Z
 
-    return U, V, W
+    return np.array([U, V, W])
 
 def downstreamLine(r, theta, chord, alpha, Uax, Utan, R, Loutlet, dx):
     # this function discretizes a vorticity line
-    N = int(Loutlet * R / dx) # number of points along each line
-    thetas = np.zeros((N)); rs = np.ones((N)) * r; xs = np.empty((N))
+    N = int((Loutlet * R - chord)/ dx) # number of points along each line
+    thetas = np.zeros((N)); rs = np.ones((N)) * r; xs = np.zeros((N))
     # compute the first two points along the chord
     thetas[0] = theta
     thetas[1] = theta + np.sin(alpha)*chord / r
     xs[0] = 0; xs[1] = chord*np.cos(alpha)
     # compute the rest of the downstream vortex lines
-    dtheta = dx * Utan/Uax / r 
-    xs[2:] = xs[1] + np.arange(1,N-1) * dx
-    thetas[2:] = thetas[1] + np.arange(1,N-1) * dtheta
+    dtheta = dx * (Utan/Uax) / r
+    xs[2:] = xs[1] + (np.arange(1,N-1) * dx)
+    thetas[2:] = thetas[1] + (np.arange(1,N-1) * dtheta)
     coords = np.vstack([xs, rs, thetas])
     return coords #[x,r,theta]
 
