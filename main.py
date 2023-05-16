@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import functions as fcn
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 
 # Switch to TeX style for plots 
 plt.rcParams['text.usetex'] = True
@@ -35,7 +36,7 @@ N_B = 3 # number of blades
 
 # Lifting line model inputs
 Ncp = 9 # number of segments per blade = number of control points
-psi = np.pi/2 # azimuthal position of the first rotor blade in radians
+psi = np.pi/10 # np.pi/3 # azimuthal position of the first rotor blade in radians
 Loutlet = 1# the distance from the rotor  to the domain boundary, in rotor diameters
 dx = 0.5  # discretization distance for the vortex ring, in meters.
 spacing = 1 # 0 - regular, 1 -  cosine
@@ -86,7 +87,9 @@ class VortexRing:
                 self.coords_cyl = np.hstack((np.flip(fcn.downstreamLine(Rvec[0], theta, chordVec[0], alphaVec[0], UaxVec[0], UtanVec[0], R, Loutlet, dx),1), \
                                              fcn.downstreamLine(Rvec[1], theta, chordVec[1], alphaVec[1], UaxVec[1], UtanVec[1], R, Loutlet, dx)))
                 self.coords_cart = fcn.cyl2cart(self.coords_cyl)
-                self.control_point = fcn.cyl2cart(np.array([[0], [0.5*(self.r[0] + self.r[1])], [theta] ]))
+                self.control_point = fcn.cyl2cart(np.array([[0.5*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
+                self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
+                                      [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
 
 ### Discretize the rotor blades
 print("Initialize the vortexRing system")
@@ -116,35 +119,8 @@ for j in range(N_B):
                 chordVec = np.array([vortexSystem["chord"][i],vortexSystem["chord"][i+1]])
                 UaxVec = np.array([vortexSystem["U_ax"][i],vortexSystem["U_ax"][i+1]])
                 UtanVec = np.array([vortexSystem["U_tan"][i],vortexSystem["U_tan"][i+1]])
-
                 vortexSystem[f"inst{j}_{i}"] = VortexRing(Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec)
 
-if doPlot == 1:
-        bladeCoordsTE = np.zeros((N_B,Ncp,3))
-        bladeCoordsLE = np.zeros((N_B,Ncp,3))
-
-        fig1 = plt.figure(figsize=(8, 4))
-        plt.title('Flow Field downstream of the rotor')
-        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
-        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
-        plt.grid()
-        plt.xlabel(r'$r/R$')
-        plt.legend()
-        plt.savefig("figures/flowfield",bbox_inches='tight')
-        
-        plt.figure(2,constrained_layout=True)
-        ax = plt.axes(projection='3d')
-
-        for j in range(N_B):
-                for i in range(Ncp): 
-                #for i in range(Ncp-1,Ncp):
-                        coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
-                        # Data for a three-dimensional line
-                        ax.plot3D(coords_plot[0,:]/R, coords_plot[1,:]/R, coords_plot[2,:]/R, 'gray')
-                        # compute the coordinates of the blades
-        ax.set_box_aspect((5, 1, 1))
-
-        plt.show()
 
 # Assemble the induction matrix
 controlPoints = {}
@@ -166,5 +142,41 @@ for j1 in range(N_B):
                                         x1 = vort_fil[:,n]; x2 = vort_fil[:,n+1]
                                         # finally assemble the induction matrix
                                         controlPoints["vel_ind"][c1,c2,:] += fcn.velocity3d_vortex_filament(controlPoints["gamma"][c2], x1, x2, coords_cp, r)
+
+
+if doPlot == 1:
+
+        fig1 = plt.figure(figsize=(8, 4))
+        plt.title('Flow Field downstream of the rotor')
+        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
+        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
+        plt.grid()
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.savefig("figures/flowfield",bbox_inches='tight')
+        
+        plt.figure(2,constrained_layout=False)
+        ax = plt.axes(projection='3d')
+        for j in range(N_B):
+                # setup blade geometry
+                for i in range(Ncp): 
+                #for i in range(Ncp-1,Ncp):
+                        coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
+                        blade_plot = vortexSystem[f"inst{j}_{i}"].blade
+                        # Data for a three-dimensional line
+                        ax.plot3D(coords_plot[0,:]/R, coords_plot[1,:]/R, coords_plot[2,:]/R, 'gray')
+                        print(i,j)
+                        print(blade_plot)
+
+                        ax.plot_trisurf(blade_plot[0,:]/R, blade_plot[1,:]/R, blade_plot[2,:]/R, linewidths=0,edgecolor='Gray', color='gray')
+                        # ax.plot_trisurf(Poly3DCollection(blade_plot, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
+
+                        # compute the coordinates of the blades
+        ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
+        # the beam
+        ax.plot3D([0,0], [0, 0], [0, -1], 'gray', linewidth=10)
+        ax.set_box_aspect((5, 1, 1))
+        plt.show()
+
 print("The Induction matrix is assembled")
 print("Solution converged")
