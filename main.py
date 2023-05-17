@@ -35,13 +35,13 @@ U_inf = 10  # unperturbed wind speed in m/s
 N_B = 3 # number of blades
 
 # Lifting line model inputs
-Ncp = 9 # number of segments per blade = number of control points
+Ncp = 10 # number of segments per blade = number of control points
 psi = np.pi/10 # np.pi/3 # azimuthal position of the first rotor blade in radians
 Loutlet = 1# the distance from the rotor  to the domain boundary, in rotor diameters
 dx = 0.5  # discretization distance for the vortex ring, in meters.
 spacing = 1 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction?
-
+rho = 1.225
 mu_tip = 1
 mu_root = 0.2
 '''Run the BEM model for the inputs '''
@@ -91,11 +91,14 @@ class VortexRing:
                 self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
                                       [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
                 radVec = fcn.cyl2cart(np.array([0, self.r[1], theta])) - fcn.cyl2cart(np.array([0, self.r[0], theta])) #  vector in radial direction x r theta
-                theta1c = theta - np.sin(np.mean(alphaVec))*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
                 
-                chordVec = fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) - fcn.cyl2cart(np.array([np.cos(np.mean(alphaVec)), np.mean(Rvec), theta1c])) 
+                twist = np.deg2rad(14 * (1 - np.mean(Rvec)/R) - pitch)  # twist in rad
+                theta1c = theta - np.sin(twist)*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
+                
+                chordVec = fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) - fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) 
                 self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
                 self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
+                self.thetaVec = np.cross(self.radVec.flatten(),self.chordVec.flatten())  # unit vector aligned with the local angle theta
 ### Discretize the rotor blades
 print("Initialize the vortexRing system")
 vortexSystem ={} 
@@ -127,22 +130,27 @@ for j in range(N_B):
                 vortexSystem[f"inst{j}_{i}"] = VortexRing(Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec)
 
 # this must be close to zero, orthogonal vectors
-np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].chordVec.flatten())
+print("Dot product of r_hat and c_hat:" , np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].chordVec.flatten()))
 # Assemble the induction matrix
 controlPoints = {}
 controlPoints["coords"] = np.empty((3*Ncp,3))
 controlPoints["gamma"] = np.ones((3*Ncp))
 controlPoints["Uin"] = np.empty((3,3*Ncp))
+controlPoints["Uin_blade"] = np.empty((3,3*Ncp))
 controlPoints["matrix"] = np.zeros((3*Ncp,3*Ncp,3))
 controlPoints["r_hat"] = np.empty((3*Ncp,3))
 controlPoints["c_hat"] = np.empty((3*Ncp,3))
+controlPoints["theta_hat"] = np.empty((3*Ncp,3))
+controlPoints["chord"] = np.empty((3*Ncp))
 
 for j1 in range(N_B):
         for i1 in range(Ncp):
-                c1 = j1*Ncp+i1 # row index in induction matrix
+                c1 = j1*Ncp+i1 # row index in induction matrix, i.e control point index
                 controlPoints["coords"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].control_point.flatten() # assemble global control points matrix.
                 controlPoints["r_hat"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].radVec.flatten()
                 controlPoints["c_hat"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].chordVec.flatten()
+                controlPoints["theta_hat"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].thetaVec.flatten()
+                controlPoints["chord"][c1] = np.mean(vortexSystem[f"inst{j1}_{i1}"].chordVec.flatten())
                 # now calculate induced velocity from each element
                 for j2 in range(N_B):
                         for i2 in range(Ncp):
@@ -155,15 +163,43 @@ for j1 in range(N_B):
                                         # finally assemble the induction matrix
                                         controlPoints["matrix"][c1,c2,:] += fcn.velocity3d_vortex_filament(controlPoints["gamma"][c2], x1, x2, coords_cp, r)
 
+# Begin the iteration loop
+diff = 1000
+tol = 0.0001
+iter = 0
+controlPoints["gamma"] = np.ones((3*Ncp))*1
+
+while diff > tol:
+
 # Calculate the new induction velocities
+        print("Iteration number:", iter)
+        controlPoints["Uin"][0,:] = controlPoints["matrix"][:,:,0]@controlPoints["gamma"] + U_inf # x-velocity
+        controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"] # y-velocity
+        controlPoints["Uin"][2,:] = controlPoints["matrix"][:,:,2]@controlPoints["gamma"] # z-velocity, all in turbine (global) frame of reference
 
+        '''Calculate the lift from the induced velocity'''
+        # First decompose the induced velocities vector in the components in the blade local coordinate system
+        controlPoints["Uin_blade"][0,:] = np.einsum('ij,ji->i',controlPoints["r_hat"],controlPoints["Uin"]) # r-component
+        controlPoints["Uin_blade"][1,:] = np.einsum('ij,ji->i',controlPoints["c_hat"],controlPoints["Uin"]) # c-component
+        controlPoints["Uin_blade"][2,:] = np.einsum('ij,ji->i',controlPoints["theta_hat"],controlPoints["Uin"]) # theta-component
 
-controlPoints["Uin"][0,:] = controlPoints["matrix"][:,:,0]@controlPoints["gamma"]
-controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"]
-controlPoints["Uin"][2,:] = controlPoints["matrix"][:,:,2]@controlPoints["gamma"]
-# Validation plots
-# should be periodic.
+        # Now we can easily calculate the magnitude of the in-plane velocity
+        controlPoints["|V|bl"] = np.sqrt((controlPoints["Uin_blade"][1,:]**2+controlPoints["Uin_blade"][2,:]**2) + U_inf**2)
+        # And the angle of attack
+        controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][2,:]/controlPoints["Uin_blade"][1,:]) # arctan of 
+        # Update the Gamma 
+        controlPoints["gamma_upd"] = 0.5*2*np.pi*controlPoints["alpha"]*(controlPoints["|V|bl"])*controlPoints["chord"]
+        diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
+        controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
+        iter += 1
+        # Validation plots
+
+plt.plot(controlPoints['gamma'][1:Ncp])
+plt.plot(np.rad2deg(controlPoints['alpha'][1:Ncp]))
+
+# should be periodic and the same, as the norm of a vector is the first invariant :)
 plt.plot(np.linalg.norm(controlPoints["Uin"],axis=0))
+plt.plot(np.linalg.norm(controlPoints["Uin_blade"],axis=0))
 
 plt.figure(2,constrained_layout=True)
 ax = plt.axes(projection='3d')
@@ -206,6 +242,8 @@ if doPlot == 1:
         # ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
         # the beam
         ax.plot3D([0,0], [0, 0], [0, -1], 'gray', linewidth=10)
+        # ax.set_ylim(0, R/3)
+        # ax.set_zlim(0, R/3)
         
         # ax.set_box_aspect((5, 1, 1))
         plt.show()
