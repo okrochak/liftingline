@@ -168,7 +168,7 @@ diff = 1000
 tol = 0.0001
 iter = 0
 controlPoints["gamma"] = np.ones((3*Ncp))*1
-
+circulation_history = np.empty((3*Ncp,0))
 while diff > tol:
 
 # Calculate the new induction velocities
@@ -191,6 +191,7 @@ while diff > tol:
         controlPoints["gamma_upd"] = 0.5*2*np.pi*controlPoints["alpha"]*(controlPoints["|V|bl"])*controlPoints["chord"]
         diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
         controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
+        circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
         iter += 1
         # Validation plots
 
