@@ -87,10 +87,15 @@ class VortexRing:
                 self.coords_cyl = np.hstack((np.flip(fcn.downstreamLine(Rvec[0], theta, chordVec[0], alphaVec[0], UaxVec[0], UtanVec[0], R, Loutlet, dx),1), \
                                              fcn.downstreamLine(Rvec[1], theta, chordVec[1], alphaVec[1], UaxVec[1], UtanVec[1], R, Loutlet, dx)))
                 self.coords_cart = fcn.cyl2cart(self.coords_cyl)
-                self.control_point = fcn.cyl2cart(np.array([[0.5*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
+                self.control_point = fcn.cyl2cart(np.array([[0*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
                 self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
                                       [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
-
+                radVec = fcn.cyl2cart(np.array([0, self.r[1], theta])) - fcn.cyl2cart(np.array([0, self.r[0], theta])) #  vector in radial direction x r theta
+                theta1c = theta - np.sin(np.mean(alphaVec))*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
+                
+                chordVec = fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) - fcn.cyl2cart(np.array([np.cos(np.mean(alphaVec)), np.mean(Rvec), theta1c])) 
+                self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
+                self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
 ### Discretize the rotor blades
 print("Initialize the vortexRing system")
 vortexSystem ={} 
@@ -121,16 +126,23 @@ for j in range(N_B):
                 UtanVec = np.array([vortexSystem["U_tan"][i],vortexSystem["U_tan"][i+1]])
                 vortexSystem[f"inst{j}_{i}"] = VortexRing(Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec)
 
-
+# this must be close to zero, orthogonal vectors
+np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].chordVec.flatten())
 # Assemble the induction matrix
 controlPoints = {}
 controlPoints["coords"] = np.empty((3*Ncp,3))
 controlPoints["gamma"] = np.ones((3*Ncp))
-controlPoints["vel_ind"] = np.zeros((3*Ncp,3*Ncp,3))
+controlPoints["Uin"] = np.empty((3,3*Ncp))
+controlPoints["matrix"] = np.zeros((3*Ncp,3*Ncp,3))
+controlPoints["r_hat"] = np.empty((3*Ncp,3))
+controlPoints["c_hat"] = np.empty((3*Ncp,3))
+
 for j1 in range(N_B):
         for i1 in range(Ncp):
                 c1 = j1*Ncp+i1 # row index in induction matrix
                 controlPoints["coords"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].control_point.flatten() # assemble global control points matrix.
+                controlPoints["r_hat"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].radVec.flatten()
+                controlPoints["c_hat"][c1,:] = vortexSystem[f"inst{j1}_{i1}"].chordVec.flatten()
                 # now calculate induced velocity from each element
                 for j2 in range(N_B):
                         for i2 in range(Ncp):
@@ -141,11 +153,24 @@ for j1 in range(N_B):
                                 for n in range(vort_fil.shape[1]-1):
                                         x1 = vort_fil[:,n]; x2 = vort_fil[:,n+1]
                                         # finally assemble the induction matrix
-                                        controlPoints["vel_ind"][c1,c2,:] += fcn.velocity3d_vortex_filament(controlPoints["gamma"][c2], x1, x2, coords_cp, r)
+                                        controlPoints["matrix"][c1,c2,:] += fcn.velocity3d_vortex_filament(controlPoints["gamma"][c2], x1, x2, coords_cp, r)
 
+# Calculate the new induction velocities
+
+
+controlPoints["Uin"][0,:] = controlPoints["matrix"][:,:,0]@controlPoints["gamma"]
+controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"]
+controlPoints["Uin"][2,:] = controlPoints["matrix"][:,:,2]@controlPoints["gamma"]
+# Validation plots
+# should be periodic.
+plt.plot(np.linalg.norm(controlPoints["Uin"],axis=0))
+
+plt.figure(2,constrained_layout=True)
+ax = plt.axes(projection='3d')
+ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
 
 if doPlot == 1:
-
         fig1 = plt.figure(figsize=(8, 4))
         plt.title('Flow Field downstream of the rotor')
         plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
@@ -155,7 +180,7 @@ if doPlot == 1:
         plt.legend()
         plt.savefig("figures/flowfield",bbox_inches='tight')
         
-        plt.figure(2,constrained_layout=False)
+        fig = plt.figure(2,constrained_layout=False,figsize=(8, 4))
         ax = plt.axes(projection='3d')
         for j in range(N_B):
                 # setup blade geometry
@@ -164,18 +189,25 @@ if doPlot == 1:
                         coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
                         blade_plot = vortexSystem[f"inst{j}_{i}"].blade
                         # Data for a three-dimensional line
-                        ax.plot3D(coords_plot[0,:]/R, coords_plot[1,:]/R, coords_plot[2,:]/R, 'gray')
-                        print(i,j)
-                        print(blade_plot)
+                        ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
 
-                        ax.plot_trisurf(blade_plot[0,:]/R, blade_plot[1,:]/R, blade_plot[2,:]/R, linewidths=0,edgecolor='Gray', color='gray')
+                        # print(i,j)
+                        # print(blade_plot)
+
+                        ax.plot_trisurf(blade_plot[0,:], blade_plot[1,:], blade_plot[2,:], linewidths=0,edgecolor='Gray', color='gray')
                         # ax.plot_trisurf(Poly3DCollection(blade_plot, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
-
+                        ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+                                 controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2],color = 'red')
+                        ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+                                 controlPoints["c_hat"][:,0], controlPoints["c_hat"][:,1], controlPoints["c_hat"][:,2],color = 'black')
                         # compute the coordinates of the blades
-        ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
+                        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+
+        # ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
         # the beam
         ax.plot3D([0,0], [0, 0], [0, -1], 'gray', linewidth=10)
-        ax.set_box_aspect((5, 1, 1))
+        
+        # ax.set_box_aspect((5, 1, 1))
         plt.show()
 
 print("The Induction matrix is assembled")

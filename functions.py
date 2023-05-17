@@ -141,7 +141,7 @@ def downstreamLine(r, theta, chord, alpha, Uax, Utan, R, Loutlet, dx):
     thetas = np.zeros((N)); rs = np.ones((N)) * r; xs = np.zeros((N))
     # compute the first two points along the chord
     thetas[0] = theta
-    thetas[1] = theta + np.sin(alpha)*chord / r
+    thetas[1] = theta - np.sin(alpha)*chord / r
     xs[0] = 0; xs[1] = chord*np.cos(alpha)
     # compute the rest of the downstream vortex lines
     dtheta = dx * (Utan/Uax) / r
@@ -151,6 +151,8 @@ def downstreamLine(r, theta, chord, alpha, Uax, Utan, R, Loutlet, dx):
     return coords #[x,r,theta]
 
 def cyl2cart(arr): # array must be shaped as [ndim, npoints], with ndim = [x r theta]
+    if arr.ndim == 1:
+        arr = arr[:,np.newaxis]
     newarr = arr * 0
     newarr[0,:] = arr[0,:]
     newarr[1,:] = np.sin(arr[2,:])*arr[1,:] #y - coordinate
