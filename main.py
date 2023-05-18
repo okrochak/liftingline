@@ -37,7 +37,7 @@ N_B = 3 # number of blades
 # Lifting line model inputs
 Ncp = 20 # number of segments per blade = number of control points
 psi = np.pi/10 # np.pi/3 # azimuthal position of the first rotor blade in radians
-Loutlet = 5 # the distance from the rotor  to the domain boundary, in rotor diameters
+Loutlet = 1 # the distance from the rotor  to the domain boundary, in rotor diameters
 dx = 0.5  # discretization distance for the vortex ring, in meters.
 spacing = 1 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction?
@@ -105,7 +105,7 @@ class VortexRing:
                 self.twist = twist
                 theta1c = theta - np.sin(twist)*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
                 
-                chordVec = fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) - fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) 
+                chordVec = fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) - fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) 
                 self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
                 self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
                 self.thetaVec = np.cross(self.radVec.flatten(),self.chordVec.flatten())  # unit vector aligned with the local angle theta
@@ -244,7 +244,7 @@ if doPlot == 1:
                         coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
                         blade_plot = vortexSystem[f"inst{j}_{i}"].blade
                         # Data for a three-dimensional line
-                        ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
+                        # ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
 
                         # print(i,j)
                         # print(blade_plot)
@@ -255,16 +255,20 @@ if doPlot == 1:
                                  controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2],color = 'red')
                         ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
                                  controlPoints["c_hat"][:,0], controlPoints["c_hat"][:,1], controlPoints["c_hat"][:,2],color = 'black')
+                        ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+                                 controlPoints["theta_hat"][:,0], controlPoints["theta_hat"][:,1], controlPoints["theta_hat"][:,2],color = 'blue')
+                        ax.quiver(np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]), \
+                                 np.array([0,0,3]),np.array([0,3,0]),np.array([3,0,0]),color = 'green')
                         # compute the coordinates of the blades
                         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 
         # ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
         # the beam
         ax.plot3D([0,0], [0, 0], [0, -1], 'gray', linewidth=10)
-        # ax.set_ylim(0, R/3)
-        # ax.set_zlim(0, R/3)
-        
-        # ax.set_box_aspect((5, 1, 1))
+        ax.set_ylim(0, R/3)
+        ax.set_zlim(0, R/3)
+        ax.set_xlim(-R/6, R/6)
+        ax.set_box_aspect((1, 1, 1))
         plt.show()
 
 print("The Induction matrix is assembled")
