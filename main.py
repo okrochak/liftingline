@@ -6,8 +6,8 @@ import functions as fcn
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 
 # Switch to TeX style for plots 
-plt.rcParams['text.usetex'] = True
-plt.rcParams.update({'font.size': 18})
+#plt.rcParams['text.usetex'] = True
+#plt.rcParams.update({'font.size': 18})
 
 airfoil = 'polarDU95W180.txt'
 data1 = pd.read_csv(airfoil, header=0,
@@ -22,7 +22,7 @@ Phi = np.arange(0.2, 2*np.pi + delta_Phi / 2, delta_Phi)
 TSR = 8
 
 # Plot figures?
-doPlot = True
+doPlot = False
 
 # blade shape
 R = 50
@@ -183,9 +183,9 @@ tol = 0.0001
 iter = 0
 controlPoints["gamma"] = np.ones((3*Ncp))*1
 circulation_history = np.empty((3*Ncp,0))
-while diff > tol:
 
-# Calculate the new induction velocities
+while diff > tol:
+        # Calculate the new induction velocities
         print("Iteration number:", iter)
         controlPoints["Uin"][0,:] = controlPoints["matrix"][:,:,0]@controlPoints["gamma"] # x-velocity
         controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"] # y-velocity
@@ -193,27 +193,38 @@ while diff > tol:
 
         '''Calculate the lift from the induced velocity'''
         # First decompose the induced velocities vector in the components in the blade local coordinate system
-        controlPoints["Uin_blade"][0,:] = np.einsum('ij,ji->i',controlPoints["r_hat"],controlPoints["Uin"]) # r-component
-        controlPoints["Uin_blade"][1,:] = np.einsum('ij,ji->i',controlPoints["c_hat"],controlPoints["Uin"]) + U_inf*np.cos(controlPoints["twist"]) # c-component
-        controlPoints["Uin_blade"][2,:] = np.einsum('ij,ji->i',controlPoints["theta_hat"],controlPoints["Uin"])+ U_inf*np.sin(controlPoints["twist"]) #+ Omega*controlPoints["r"] # theta-component
+        #controlPoints["Uin_blade"][0,:] = np.einsum('ij,ji->i',controlPoints["r_hat"],controlPoints["Uin"]) # r-component
+        #controlPoints["Uin_blade"][1,:] = np.einsum('ij,ji->i',controlPoints["c_hat"],controlPoints["Uin"]) + U_inf*np.cos(controlPoints["twist"]) # c-component
+        #controlPoints["Uin_blade"][2,:] = np.einsum('ij,ji->i',controlPoints["theta_hat"],controlPoints["Uin"])+ U_inf*np.sin(controlPoints["twist"]) #+ Omega*controlPoints["r"] # theta-component
+        U_axial = U_inf + controlPoints["Uin"][0,:]
+
+        aux = np.zeros(len(controlPoints["Uin"][0,:]))
+        for i in range(len(controlPoints["Uin"][0,:])):
+                aux[i] = np.dot([U_inf + controlPoints["Uin"][0,i], controlPoints["Uin"][1,i], controlPoints["Uin"][2,i]], controlPoints["theta_hat"][i])
+        U_tan = Omega * controlPoints["r"] + aux
+
+        df_axial, df_tan, controlPoints['alpha'], phi, controlPoints["gamma_upd"], CL, CD = fcn.loadBladeElement(U_axial, U_tan, controlPoints["chord"], np.rad2deg(controlPoints["twist"]), polar_alpha, polar_CL, polar_CD)
 
         # Now we can easily calculate the magnitude of the in-plane velocity
-        controlPoints["|V|bl"] = np.sqrt((controlPoints["Uin_blade"][1,:]**2+controlPoints["Uin_blade"][2,:]**2))
+        #controlPoints["|V|bl"] = np.sqrt((controlPoints["Uin_blade"][1,:]**2+controlPoints["Uin_blade"][2,:]**2))
         # And the angle of attack
-        controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][2,:]/controlPoints["Uin_blade"][1,:]) # arctan of 
+        #controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][2,:]/controlPoints["Uin_blade"][1,:]) # arctan of 
         # Update the Gamma 
-        CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
-        controlPoints["gamma_upd"] = 0.5*CL*(controlPoints["|V|bl"])*controlPoints["chord"]
+        #CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
+        #controlPoints["gamma_upd"] = 0.5*CL*(controlPoints["|V|bl"])*controlPoints["chord"]
+        #diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
+        #controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
         diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
         controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
         circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
         iter += 1
-        # Validation plots
+
+# Validation plots
 print("Solution converged")
-fig3 = plt.figure(figsize=(8, 4))
+fig1 = plt.figure(figsize=(8, 4))
 plt.title('Converged circulation solution')
-plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp],label=r'$\Gamma$')
-plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp] / (np.pi * U_inf ** 2 / (Omega * N_B)),label=r'$\Gamma$')
+#plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
@@ -221,13 +232,20 @@ plt.grid()
 # plt.plot(np.linalg.norm(controlPoints["Uin"],axis=0))
 # plt.plot(np.linalg.norm(controlPoints["Uin_blade"],axis=0))
 
-plt.figure(2,constrained_layout=True)
-ax = plt.axes(projection='3d')
-ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
-          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
+fig2 = plt.figure(figsize=(8, 4))
+plt.title('Converged circulation solution')
+plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.xlabel(r'$r/R$')
+plt.legend()
+plt.grid()
+
+#fig3 = plt.figure(2,constrained_layout=True)
+#ax = plt.axes(projection='3d')
+#ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+#          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
 
 if doPlot == 1:
-        fig1 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title('Flow Field downstream of the rotor')
         plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
         plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
@@ -237,7 +255,7 @@ if doPlot == 1:
         plt.legend()
         plt.savefig("figures/flowfield",bbox_inches='tight')
         
-        fig = plt.figure(2,constrained_layout=False,figsize=(8, 4))
+        fig5 = plt.figure(2,constrained_layout=False,figsize=(8, 4))
         plt.title('Wake Geometry')
         ax = plt.axes(projection='3d')
         for j in range(N_B):
@@ -262,7 +280,7 @@ if doPlot == 1:
                         ax.quiver(np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]), \
                                  np.array([0,0,3]),np.array([0,3,0]),np.array([3,0,0]),color = 'green')
                         # compute the coordinates of the blades
-                        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+                        fig5.subplots_adjust(left=0, right=1, bottom=0, top=1)
 
         # ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
         # the beam
@@ -274,5 +292,7 @@ if doPlot == 1:
         # ax.set_zlim(0, R/3)
         # ax.set_xlim(-R/6, R/6)
         ax.set_box_aspect((5, 1, 1))
-        plt.show()
+        
+        
+plt.show()
 
