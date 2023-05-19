@@ -135,17 +135,18 @@ def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
 
     return np.array([U, V, W])
 
-def downstreamLine(r, theta, chord, alpha, Uax, Utan, R, Loutlet, dx):
+def downstreamLine(r, theta, chord, twist, Uax, Utan, R, Loutlet, dx):
     # this function discretizes a vorticity line
-    N = int((Loutlet * R - chord)/ dx) # number of points along each line
+    N = int((Loutlet*R - chord)/ dx) # number of points along each line
     thetas = np.zeros((N)); rs = np.ones((N)) * r; xs = np.zeros((N))
     # compute the first two points along the chord
     thetas[0] = theta
-    thetas[1] = theta - np.sin(alpha)*chord / r
-    xs[0] = 0; xs[1] = chord*np.cos(alpha)
+    thetas[1] = theta - (np.cos(twist)*chord / r)
+    xs[0] = 0; xs[1] = chord*np.sin(twist)
     # compute the rest of the downstream vortex lines
-    dtheta = dx * (Utan/Uax) / r
+    dtheta = dx * (Utan/Uax) / r 
     xs[2:] = xs[1] + (np.arange(1,N-1) * dx)
+
     thetas[2:] = thetas[1] + (np.arange(1,N-1) * dtheta)
     coords = np.vstack([xs, rs, thetas])
     return coords #[x,r,theta]
@@ -156,5 +157,5 @@ def cyl2cart(arr): # array must be shaped as [ndim, npoints], with ndim = [x r t
     newarr = arr * 0
     newarr[0,:] = arr[0,:]
     newarr[1,:] = np.sin(arr[2,:])*arr[1,:] #y - coordinate
-    newarr[2,:] = -np.cos(arr[2,:])*arr[1,:] #z - cordinate
+    newarr[2,:] = np.cos(arr[2,:])*arr[1,:] #z - cordinate
     return newarr #now x-y-z
