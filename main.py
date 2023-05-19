@@ -9,18 +9,12 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 # plt.rcParams['text.usetex'] = True
 # plt.rcParams.update({'font.size': 18})
 
-airfoil = 'polarDU95W180.txt'
-data1 = pd.read_csv(airfoil, header=0,
-                    names=["alpha", "cl", "cd", "cm"],  sep='\s+')
-polar_alpha = data1['alpha'][:]
-polar_CL = data1['cl'][:]
-polar_CD = data1['cd'][:]
 delta_mu = 0.01
 mu = np.arange(0.2, 1 + delta_mu / 2, delta_mu)
 TSR = 8
 
 # Plot figures?
-doPlot = False
+doPlot = 1
 
 # blade shape
 R = 50
@@ -33,9 +27,9 @@ U_inf = 10  # unperturbed wind speed in m/s
 N_B = 3 # number of blades
 
 # Lifting line model inputs
-Ncp = 10 # number of segments per blade = number of control points
-psi = np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radians
-Loutlet = 5 # the distance from the rotor  to the domain boundary, in rotor diameters
+Ncp = 15 # number of segments per blade = number of control points
+psi =  np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radians
+Loutlet = 1 # the distance from the rotor  to the domain boundary, in rotor diameters
 dx = 0.5 # discretization time step for the vortex ring.
 spacing = 0 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction?
@@ -51,7 +45,7 @@ polar_alpha = data1['alpha'][:]
 polar_CL = data1['cl'][:]
 polar_CD = data1['cd'][:]
 
-'''Run the BEM model for the inputs '''
+'''1. Run the BEM model for the inputs '''
 # TSR_distribution = np.linspace(4,10,24)
 CT_distribution = []
 CP_distribution = []
@@ -125,7 +119,7 @@ vortexSystem["U_ax"] = np.interp(vortexSystem["mu_coord"],mu,U_inf*(1-a_axial))
 vortexSystem["U_tan"] = np.interp(vortexSystem["mu_coord"],mu,Omega*mu*R*(1+a_tan))
 
 
-# Create the system of vortex filaments with unit circulation
+'''2. Assemble the vortex ring system for the wake geometry '''
 for j in range(N_B):
         theta = psi + j*(2/3)*np.pi
         for i in range(Ncp):
@@ -139,7 +133,8 @@ for j in range(N_B):
 
 # this must be close to zero, orthogonal vectors
 print("Dot product of r_hat and x_hat:" , np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].xVec.flatten()))
-# Assemble the induction matrix
+
+'''3. Assemble the induction matrix'''
 controlPoints = {}
 controlPoints["coords"] = np.empty((N_B*Ncp,3))
 controlPoints["gamma"] = np.ones((N_B*Ncp))
@@ -175,7 +170,7 @@ for j1 in range(N_B):
                                         controlPoints["matrix"][c1,c2,:] += fcn.velocity3d_vortex_filament(1, x1, x2, coords_cp, r_vortex)
 print("The Induction matrix is assembled")
 
-# Begin the iteration loop
+'''4. Begin the iteration loop '''
 diff = 1000
 tol = 0.01
 iter = 0
@@ -188,16 +183,15 @@ while diff > tol:
         controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,2]@controlPoints["gamma"] # y-velocity
         controlPoints["Uin"][2,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"] # z-velocity, all in turbine (global) frame of reference
 
-        '''Calculate the lift from the induced velocity'''
+        '''Calculate the new circulation (lift) from the induced velocity'''
         # First decompose the induced velocities vector in the components in the blade local coordinate system
-        controlPoints["Uin"][0,:] = U_inf + controlPoints["Uin"][0,:] #  x-direction
-        controlPoints["Uin_blade"][0,:] = controlPoints["Uin"][0,:]  
-        controlPoints["Uin_blade"][1,:] = Omega * controlPoints["r"] + np.einsum('ij,ji->i',controlPoints["theta_hat"],controlPoints["Uin"])# azimuthal direction
+        controlPoints["Uin_blade"][0,:] = U_inf + controlPoints["Uin"][0,:]   #  x-direction velocity acting on the blade
+        controlPoints["Uin_blade"][1,:] = Omega * controlPoints["r"] + np.einsum('ij,ji->i',controlPoints["theta_hat"],controlPoints["Uin"])# azimuthal velocity
 
         # Now we can easily calculate the magnitude of the in-plane velocity
         controlPoints["|V|bl"] = np.sqrt(((controlPoints["Uin_blade"][0,:]**2)+(controlPoints["Uin_blade"][1,:]**2)))
         # And the angle of attack
-        controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][0,:]/controlPoints["Uin_blade"][1,:]) - controlPoints["twist"]
+        controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][0,:]/controlPoints["Uin_blade"][1,:]) - controlPoints["twist"] # phi - twist
         # Update the Gamma 
 
         CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
@@ -212,8 +206,10 @@ print("Solution converged")
 fig1 = plt.figure(figsize=(8, 4))
 plt.title('Converged circulation solution')
 fac = np.pi * U_inf**2 / (Omega*N_B)
-plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma /(\pi U^2 / \Omega N_B))$')
-# plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_1 /(\pi U^2 / \Omega N_B))$')
+plt.plot(controlPoints['r'][Ncp:2*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_2 /(\pi U^2 / \Omega N_B))$')
+plt.plot(controlPoints['r'][2*Ncp:3*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_3 /(\pi U^2 / \Omega N_B))$')
+
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
@@ -260,7 +256,7 @@ if doPlot == 1:
                         # print(i,j)
                         # print(blade_plot)
 
-                        # ax.plot_trisurf(blade_plot[0,:], blade_plot[1,:], blade_plot[2,:], linewidths=0,edgecolor='Gray', color='gray')
+                        ax.plot_trisurf(blade_plot[0,:], blade_plot[1,:], blade_plot[2,:], linewidths=0,edgecolor='Gray', color='gray')
                         # ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
                         #          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2],color = 'red')
                         # ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
@@ -284,7 +280,7 @@ if doPlot == 1:
         # ax.set_zlim([-R,R])
         # ax.set_ylim(0, R/3)
         # ax.set_zlim(0, R/3)
-        ax.set_xlim(-R/6, R/6)
+        # ax.set_xlim(-R/6, R/6)
         # ax.set_box_aspect((5, 1, 1))
         plt.savefig("figures/wake",bbox_inches='tight')
         plt.show()
