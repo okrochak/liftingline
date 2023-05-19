@@ -35,7 +35,7 @@ U_inf = 10  # unperturbed wind speed in m/s
 N_B = 3 # number of blades
 
 # Lifting line model inputs
-Ncp = 20 # number of segments per blade = number of control points
+Ncp = 10 # number of segments per blade = number of control points
 psi = np.pi/10 # np.pi/3 # azimuthal position of the first rotor blade in radians
 Loutlet = 1 # the distance from the rotor  to the domain boundary, in rotor diameters
 dx = 0.5  # discretization distance for the vortex ring, in meters.
@@ -167,7 +167,7 @@ for j1 in range(N_B):
                 # now calculate induced velocity from each element
                 for j2 in range(N_B):
                         for i2 in range(Ncp):
-                                c2 = j2*Ncp+i2 # column index in induction matrix
+                                c2 = j2*Ncp+i2 # column index in induction matrix , i.e., vortexRing object 
                                 coords_cp = controlPoints["coords"][j1*Ncp+i1,:]
                                 vort_fil = vortexSystem[f"inst{j1}_{i1}"].coords_cart
                                 r = vortexSystem[f"inst{j1}_{i1}"].coords_cyl[1,0]
@@ -175,6 +175,7 @@ for j1 in range(N_B):
                                         x1 = vort_fil[:,n]; x2 = vort_fil[:,n+1]
                                         # finally assemble the induction matrix
                                         controlPoints["matrix"][c1,c2,:] += fcn.velocity3d_vortex_filament(controlPoints["gamma"][c2], x1, x2, coords_cp, r)
+print("The Induction matrix is assembled")
 
 # Begin the iteration loop
 diff = 1000
@@ -208,14 +209,14 @@ while diff > tol:
         circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
         iter += 1
         # Validation plots
-
+print("Solution converged")
 fig3 = plt.figure(figsize=(8, 4))
-
-plt.plot(controlPoints['gamma'][1:Ncp],label=r'$\Gamma$')
-plt.plot(np.rad2deg(controlPoints['alpha'][1:Ncp]),label=r'$\alpha$')
+plt.title('Converged circulation solution')
+plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp],label=r'$\Gamma$')
+plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
-
 # should be periodic and the same, as the norm of a vector is the first invariant :)
 # plt.plot(np.linalg.norm(controlPoints["Uin"],axis=0))
 # plt.plot(np.linalg.norm(controlPoints["Uin_blade"],axis=0))
@@ -232,25 +233,26 @@ if doPlot == 1:
         plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
         plt.grid()
         plt.xlabel(r'$r/R$')
+        plt.ylabel(r'$U$')
         plt.legend()
         plt.savefig("figures/flowfield",bbox_inches='tight')
         
         fig = plt.figure(2,constrained_layout=False,figsize=(8, 4))
+        plt.title('Wake Geometry')
         ax = plt.axes(projection='3d')
         for j in range(N_B):
                 # setup blade geometry
                 for i in range(Ncp): 
-                #for i in range(Ncp-1,Ncp):
                         coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
                         blade_plot = vortexSystem[f"inst{j}_{i}"].blade
                         # Data for a three-dimensional line
-                        # ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
+                        ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
 
                         # print(i,j)
                         # print(blade_plot)
 
                         ax.plot_trisurf(blade_plot[0,:], blade_plot[1,:], blade_plot[2,:], linewidths=0,edgecolor='Gray', color='gray')
-                        # ax.plot_trisurf(Poly3DCollection(blade_plot, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
+                        #ax.plot_trisurf(Poly3DCollection(blade_plot, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
                         ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
                                  controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2],color = 'red')
                         ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
@@ -264,12 +266,13 @@ if doPlot == 1:
 
         # ax.scatter(controlPoints["coords"][:,0]/R,controlPoints["coords"][:,1]/R,controlPoints["coords"][:,2]/R)
         # the beam
-        ax.plot3D([0,0], [0, 0], [0, -1], 'gray', linewidth=10)
-        ax.set_ylim(0, R/3)
-        ax.set_zlim(0, R/3)
-        ax.set_xlim(-R/6, R/6)
-        ax.set_box_aspect((1, 1, 1))
+        ax.plot3D([0,0], [0, 0], [0, -50], 'gray', linewidth=10)
+        ax.set_xlabel('x [m]')
+        ax.set_ylabel('z [m]')
+        ax.set_zlabel('y [m]')
+        # ax.set_ylim(0, R/3)
+        # ax.set_zlim(0, R/3)
+        # ax.set_xlim(-R/6, R/6)
+        ax.set_box_aspect((5, 1, 1))
         plt.show()
 
-print("The Induction matrix is assembled")
-print("Solution converged")
