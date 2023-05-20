@@ -65,7 +65,8 @@ a_axial = results[:,1]
 a_tan = results[:,2]
 df_axial = results[:,5]
 df_tan = results[:,6] 
-alpha = results[:,10]
+gamma_BEM = results[:,7] 
+alpha_BEM = results[:,10]
 if averageFactor == 1:
         a_axial[:] = np.mean(a_axial); a_tan[:] = np.mean(a_tan)
 chord_distribution = 3 * (1 - mu) + 1 # meters
@@ -114,7 +115,7 @@ elif spacing == 1:
 vortexSystem["mu"] = (vortexSystem["mu_coord"][1:] + vortexSystem["mu_coord"][:-1]) / 2
 
 vortexSystem["chord"] = np.interp(vortexSystem["mu_coord"],mu,chord_distribution)
-vortexSystem["alpha"] = np.deg2rad(np.interp(vortexSystem["mu_coord"],mu,alpha))
+vortexSystem["alpha"] = np.deg2rad(np.interp(vortexSystem["mu_coord"],mu,alpha_BEM))
 vortexSystem["U_ax"] = np.interp(vortexSystem["mu_coord"],mu,U_inf*(1-a_axial))
 vortexSystem["U_tan"] = np.interp(vortexSystem["mu_coord"],mu,Omega*mu*R*(1+a_tan))
 
@@ -173,6 +174,7 @@ print("The Induction matrix is assembled")
 '''4. Begin the iteration loop '''
 diff = 1000
 tol = 0.01
+Niter = 10000
 iter = 0
 controlPoints["gamma"] = np.ones((N_B*Ncp)) #-3 works well?
 circulation_history = np.empty((N_B*Ncp,0))
@@ -200,6 +202,8 @@ while diff > tol:
         controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
         circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
         iter += 1
+        if iter > Niter:
+                break
 
 # Validation plots
 print("Solution converged")
@@ -209,7 +213,7 @@ fac = np.pi * U_inf**2 / (Omega*N_B)
 plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_1 /(\pi U^2 / \Omega N_B))$')
 plt.plot(controlPoints['r'][Ncp:2*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_2 /(\pi U^2 / \Omega N_B))$')
 plt.plot(controlPoints['r'][2*Ncp:3*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_3 /(\pi U^2 / \Omega N_B))$')
-
+plt.plot(mu, gamma_BEM/fac, label='BEM Solution')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
@@ -221,6 +225,7 @@ plt.savefig("figures/circulation_converged",bbox_inches='tight')
 fig2 = plt.figure(figsize=(8, 4))
 plt.title('Converged circulation solution')
 plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.plot(mu, alpha_BEM, label='BEM Solution')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
