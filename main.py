@@ -4,10 +4,11 @@ import numpy as np
 import pandas as pd
 import functions as fcn
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+from matplotlib.cm import ScalarMappable
 
 # Switch to TeX style for plots 
-# plt.rcParams['text.usetex'] = True
-# plt.rcParams.update({'font.size': 18})
+plt.rcParams['text.usetex'] = True
+plt.rcParams.update({'font.size': 18})
 
 delta_mu = 0.01
 mu = np.arange(0.2, 1 + delta_mu / 2, delta_mu)
@@ -27,16 +28,17 @@ U_inf = 10  # unperturbed wind speed in m/s
 N_B = 3 # number of blades
 
 # Lifting line model inputs
-Ncp = 15 # number of segments per blade = number of control points
+Ncp = 8 # number of segments per blade = number of control points, don't go above 25
 psi =  np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radians
-Loutlet = 1 # the distance from the rotor  to the domain boundary, in rotor diameters
-dx = 0.5 # discretization time step for the vortex ring.
-spacing = 0 # 0 - regular, 1 -  cosine
+Loutlet = 0.7 # the distance from the rotor  to the domain boundary, in rotor diameters
+dx = 0.15 # discretization time step for the vortex ring.
+spacing = 1 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction?
+convFac = 0.95 # what part of original guess to take - higher is more stable ,  
 rho = 1.225
 mu_tip = 1
 mu_root = 0.2
-r_vortex = 1 #radius of solid body rotation
+r_vortex = 0.4 #radius of solid body rotation - too small = unstable? I think must be above dx
 # Read the polar
 airfoil = 'polarDU95W180.txt'
 data1 = pd.read_csv(airfoil, header=0,
@@ -174,7 +176,7 @@ print("The Induction matrix is assembled")
 '''4. Begin the iteration loop '''
 diff = 1000
 tol = 0.01
-Niter = 10000
+Niter = 1000000
 iter = 0
 controlPoints["gamma"] = np.ones((N_B*Ncp)) #-3 works well?
 circulation_history = np.empty((N_B*Ncp,0))
@@ -199,7 +201,7 @@ while diff > tol:
         CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
         controlPoints["gamma_upd"] = 0.5*CL*(controlPoints["|V|bl"])*controlPoints["chord"]
         diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
-        controlPoints["gamma"] = 0.5*(controlPoints["gamma_upd"] + controlPoints["gamma"])
+        controlPoints["gamma"] = (1-convFac)*controlPoints["gamma_upd"] + convFac*controlPoints["gamma"]
         circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
         iter += 1
         if iter > Niter:
@@ -236,19 +238,29 @@ plt.show()
 #ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
 #          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
 
+#fig3 = plt.figure(2,constrained_layout=True)
+#ax = plt.axes(projection='3d')
+#ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+#          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
+gamma = controlPoints["gamma"]/ fac
+gamma_norm = (gamma - gamma.min()) / (gamma.max() - gamma.min())
+# gamma_norm = gamma / fac
 if doPlot == 1:
-        fig4 = plt.figure(figsize=(8, 4))
-        plt.title('Flow Field downstream of the rotor')
-        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
-        plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
-        plt.grid()
-        plt.xlabel(r'$r/R$')
-        plt.ylabel(r'$U$')
-        plt.legend()
-        plt.savefig("figures/flowfield",bbox_inches='tight')
+        # fig4 = plt.figure(figsize=(8, 4))
+        # plt.title('Flow Field downstream of the rotor')
+        # plt.plot(vortexSystem["mu_coord"], vortexSystem["U_ax"] , 'k-', label=r'$U_{ax}$')
+        # plt.plot(vortexSystem["mu_coord"], vortexSystem["U_tan"] , 'k--', label=r'$U_{tan}$')
+        # plt.grid()
+        # plt.xlabel(r'$r/R$')
+        # plt.ylabel(r'$U$')
+        # plt.legend()
+        # plt.savefig("figures/flowfield",bbox_inches='tight')
         
-        fig5 = plt.figure(2,constrained_layout=False,figsize=(8, 4))
+        fig5 = plt.figure(5,constrained_layout=False,figsize=(8, 4))
         plt.title('Wake Geometry')
+        colormap = plt.cm.get_cmap('viridis')
+        colors = colormap(gamma_norm)
+
         ax = plt.axes(projection='3d')
         for j in range(N_B):
                 # setup blade geometry
@@ -256,8 +268,8 @@ if doPlot == 1:
                         coords_plot = vortexSystem[f"inst{j}_{i}"].coords_cart
                         blade_plot = vortexSystem[f"inst{j}_{i}"].blade
                         # Data for a three-dimensional line
-                        ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], 'gray')
-
+                        line = ax.plot3D(coords_plot[0,:], coords_plot[1,:], coords_plot[2,:], c=colors[Ncp*j+i])
+                   
                         # print(i,j)
                         # print(blade_plot)
 
@@ -266,16 +278,23 @@ if doPlot == 1:
                         #          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2],color = 'red')
                         # ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
                         #          controlPoints["c_hat"][:,0], controlPoints["c_hat"][:,1], controlPoints["c_hat"][:,2],color = 'black')
-                        ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
-                                 controlPoints["theta_hat"][:,0]*5, controlPoints["theta_hat"][:,1]*5, controlPoints["theta_hat"][:,2]*5,color = 'blue')
-                        ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
-                                controlPoints["Uin"][0,:]*0, controlPoints["Uin"][1,:], controlPoints["Uin"][2,:],color = 'black')
-                        ax.quiver(np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]), \
-                                 np.array([0,0,3]),np.array([0,3,0]),np.array([3,0,0]),color = 'green')
+                        # ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+                        #          controlPoints["theta_hat"][:,0]*5, controlPoints["theta_hat"][:,1]*5, controlPoints["theta_hat"][:,2]*5,color = 'blue')
+                        # ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
+                        #         controlPoints["Uin"][0,:]*0, controlPoints["Uin"][1,:], controlPoints["Uin"][2,:],color = 'black')
+                        # ax.quiver(np.array([0,0,0]),np.array([0,0,0]),np.array([0,0,0]), \
+                        #          np.array([0,0,3]),np.array([0,3,0]),np.array([3,0,0]),color = 'green')
                         # compute the coordinates of the blades
                         fig5.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        scalar_map = ScalarMappable(cmap=colormap)
+        scalar_map.set_array(colors)
+        cbar = plt.colorbar(scalar_map, shrink=0.6)
+        custom_labels = [round(np.min(gamma),2), round(0.5*(np.max(gamma)+np.min(gamma)),2), round(np.max(gamma),2)]  # Custom labels for colorbar ticks
+        cbar.set_ticks([0, 0.5, 1])  # Set the tick positions
+        cbar.set_ticklabels(custom_labels)
+        cbar.set_label(r'$\Gamma / (\pi U_{\infty}^2 / \Omega N_B  )$')
 
-        ax.scatter(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2])
+        ax.scatter(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2],color='red')
         # the beam
         ax.plot3D([0,0], [0, 0], [0, -50], 'gray', linewidth=10)
         ax.set_xlabel('x [m]')
@@ -287,6 +306,6 @@ if doPlot == 1:
         # ax.set_zlim(0, R/3)
         # ax.set_xlim(-R/6, R/6)
         # ax.set_box_aspect((5, 1, 1))
-        plt.savefig("figures/wake",bbox_inches='tight')
+        plt.savefig("figures/wake",bbox_inches='tight',dpi = 300)
         plt.show()
 
