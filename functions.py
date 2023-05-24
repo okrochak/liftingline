@@ -3,22 +3,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-def a_Glauert(CT, yaw):
+def a_Glauert(CT):
     CT1 = 1.816
     CT2 = 2 * np.sqrt(CT1) - CT1
     
-    yaw_crit = 15
-
-    if yaw == 0:
-        if CT < CT2:
-            a = 0.5 - 0.5 * np.sqrt(1 - CT)
-        elif CT >= CT2:
-            a = 1 + (CT - CT1) / (4 * (np.sqrt(CT1) - 1))
-    elif yaw > 0:
-        #if yaw < yaw_crit:
-            a = 0.5 * np.cos(np.deg2rad(yaw)) - 0.5 * np.sqrt(np.cos(np.deg2rad(yaw)) ** 2 - CT)
-        #elif yaw >= yaw_crit:
-        #    a = 0
+    if CT < CT2:
+        a = 0.5 - 0.5 * np.sqrt(1 - CT)
+    elif CT >= CT2:
+        a = 1 + (CT - CT1) / (4 * (np.sqrt(CT1) - 1))
 
     return a
 
@@ -77,7 +69,7 @@ def solveStreamtube(U_inf, mu_1, mu_2, delta_mu, mu_root, mu_tip, Omega, R, N_B,
         CdT = dF_axial / (0.5 * A * U_inf ** 2)
 
         # calculate new axial induction, accounting for Glauert's correction
-        a_new = a_Glauert(CdT, 0)
+        a_new = a_Glauert(CdT)
 
         # calculate aximuthal induction
         aline_new = df_tan * N_B / (2 * np.pi * U_inf * (1 - a) * Omega * 2 * (mu * R) ** 2)
@@ -128,7 +120,7 @@ def solveStreamtube_unc(U_inf, mu_1, mu_2, delta_mu, mu_root, mu_tip, Omega, R, 
         CdT = dF_axial / (0.5 * A * U_inf ** 2)
 
         # calculate new axial induction, accounting for Glauert's correction
-        a_new = a_Glauert(CdT, 0)
+        a_new = a_Glauert(CdT)
 
         # calculate aximuthal induction
         aline_new = df_tan * N_B / (2 * np.pi * U_inf * (1 - a) * Omega * 2 * (mu * R) ** 2)

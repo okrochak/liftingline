@@ -7,8 +7,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 from matplotlib.cm import ScalarMappable
 
 # Switch to TeX style for plots 
-plt.rcParams['text.usetex'] = True
-plt.rcParams.update({'font.size': 18})
+##plt.rcParams['text.usetex'] = True
+#plt.rcParams.update({'font.size': 18})
 
 delta_mu = 0.01
 mu = np.arange(0.2, 1 + delta_mu / 2, delta_mu)
@@ -65,16 +65,17 @@ for i in range(len(mu)-1):
 mu = results[:,0]
 a_axial = results[:,1]
 a_tan = results[:,2]
-df_axial = results[:,5]
-df_tan = results[:,6] 
+phi_BEM = results[:,4]
+df_axial_BEM = results[:,5]
+df_tan_BEM = results[:,6] 
 gamma_BEM = results[:,7] 
 alpha_BEM = results[:,10]
 if averageFactor == 1:
         a_axial[:] = np.mean(a_axial); a_tan[:] = np.mean(a_tan)
 chord_distribution = 3 * (1 - mu) + 1 # meters
 delta_r = (mu[1:] - mu[:-1]) * R
-CT = np.sum(delta_r * df_axial[1:] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
-CP = np.sum(delta_r * df_tan[1:] * mu[1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+CT = np.sum(delta_r * df_axial_BEM[1:] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+CP = np.sum(delta_r * df_tan_BEM[1:] * mu[1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
 
 
 class VortexRing:
@@ -195,11 +196,18 @@ while diff > tol:
         # Now we can easily calculate the magnitude of the in-plane velocity
         controlPoints["|V|bl"] = np.sqrt(((controlPoints["Uin_blade"][0,:]**2)+(controlPoints["Uin_blade"][1,:]**2)))
         # And the angle of attack
-        controlPoints["alpha"] = np.arctan(controlPoints["Uin_blade"][0,:]/controlPoints["Uin_blade"][1,:]) - controlPoints["twist"] # phi - twist
+        controlPoints["phi"] = np.arctan(controlPoints["Uin_blade"][0,:]/controlPoints["Uin_blade"][1,:])
+        controlPoints["alpha"] = controlPoints["phi"] - controlPoints["twist"] # phi - twist
         # Update the Gamma 
 
         CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
+        CD = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CD)
+        L = 0.5 * controlPoints["|V|bl"] ** 2 * controlPoints["chord"] * CL
+        D = 0.5 * controlPoints["|V|bl"] ** 2 * controlPoints["chord"] * CD
+        df_axial = L * np.cos(controlPoints["phi"]) + D * np.sin(controlPoints["phi"])
+        df_tan = L * np.sin(controlPoints["phi"]) - D * np.cos(controlPoints["phi"])
         controlPoints["gamma_upd"] = 0.5*CL*(controlPoints["|V|bl"])*controlPoints["chord"]
+
         diff = np.mean(np.abs(controlPoints["gamma_upd"] - controlPoints["gamma"])) # record the difference
         controlPoints["gamma"] = (1-convFac)*controlPoints["gamma_upd"] + convFac*controlPoints["gamma"]
         circulation_history = np.append(circulation_history,controlPoints["gamma"][:,np.newaxis],axis=1)
@@ -225,12 +233,37 @@ plt.savefig("figures/circulation_converged",bbox_inches='tight')
 # plt.plot(np.linalg.norm(controlPoints["Uin_blade"],axis=0))
 
 fig2 = plt.figure(figsize=(8, 4))
-plt.title('Converged circulation solution')
-plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha [deg]$')
+plt.title('Angle of Attack')
+plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha \ [deg]$')
 plt.plot(mu, alpha_BEM, label='BEM Solution')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
+
+fig3 = plt.figure(figsize=(8, 4))
+plt.title('Inflow Angle')
+plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['phi'][0:Ncp]),label=r'$\phi \ [deg]$')
+plt.plot(mu, phi_BEM, label='BEM Solution')
+plt.xlabel(r'$r/R$')
+plt.legend()
+plt.grid()
+
+fig3 = plt.figure(figsize=(8, 4))
+plt.title('Axial Loading')
+plt.plot(controlPoints['r'][0:Ncp]/R, df_axial[0:Ncp],label=r'$\phi \ [deg]$')
+plt.plot(mu, df_axial_BEM, label='BEM Solution')
+plt.xlabel(r'$r/R$')
+plt.legend()
+plt.grid()
+
+fig3 = plt.figure(figsize=(8, 4))
+plt.title('Tangential Loading')
+plt.plot(controlPoints['r'][0:Ncp]/R, df_tan[0:Ncp],label=r'$\phi \ [deg]$')
+plt.plot(mu, df_tan_BEM, label='BEM Solution')
+plt.xlabel(r'$r/R$')
+plt.legend()
+plt.grid()
+
 plt.show()
 
 #fig3 = plt.figure(2,constrained_layout=True)
