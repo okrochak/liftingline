@@ -94,52 +94,6 @@ def solveStreamtube(U_inf, mu_1, mu_2, delta_mu, mu_root, mu_tip, Omega, R, N_B,
     return [mu, a_new, aline, alpha, phi, df_axial, df_tan, gamma, CL, CD, alpha]
 
 
-def solveStreamtube_unc(U_inf, mu_1, mu_2, delta_mu, mu_root, mu_tip, Omega, R, N_B, chord, twist, polar_alpha, polar_CL, polar_CD):
-    A = np.pi * ((mu_2 * R) ** 2 - (mu_1 * R) ** 2)  # area streamtube
-    mu = (mu_1 + mu_2) / 2  # centroide
-
-    # initialize variables
-    a = 0.3  # axial induction
-    aline = 0.0  # tangential induction factor
-
-    N_iter = 100
-    # error limit for iteration process, in absolute value of induction
-    error_iter = 0.00001
-
-    for i in range(N_iter):
-        U_axial = U_inf * (1 - a)  # axial velocity at rotor
-        U_tan = Omega * mu * R * (1 + aline)  # tangential velocity at rotor
-
-        # calculate loads in blade segment in 2D (N/m)
-        df_axial, df_tan, alpha, phi, gamma, CL, CD = loadBladeElement(U_axial, U_tan, chord, twist, polar_alpha, polar_CL, polar_CD)      
-        
-        # total force for each annuli
-        dF_axial = df_axial * R * delta_mu * N_B
-
-        # calculate thrust coefficient at the streamtube
-        CdT = dF_axial / (0.5 * A * U_inf ** 2)
-
-        # calculate new axial induction, accounting for Glauert's correction
-        a_new = a_Glauert(CdT)
-
-        # calculate aximuthal induction
-        aline_new = df_tan * N_B / (2 * np.pi * U_inf * (1 - a) * Omega * 2 * (mu * R) ** 2)
-
-    
-        # for improving convergence, weigh current and previous iteration of axial induction
-        a = 0.75 * a + 0.25 * a_new
-        aline = 0.75 * aline + 0.25 * aline_new
-
-        # test convergence of solution, by checking convergence of axial induction
-        if (np.abs(a - a_new) < error_iter):
-            #print("iterations")
-            #print(i)
-            break
-
-    return [mu, a_new, aline, alpha, phi, df_axial, df_tan, gamma, CL, CD, alpha]
-
-
-
 def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
     # USES BIOS-SAVART LAW TO COMPUTE INDUCED VELOCITIES U, V AND W
     # AT A TARGET POINT XVP1 FROM A VORTEX FILAMENT OF RADIUS RV AND
@@ -173,6 +127,7 @@ def velocity3d_vortex_filament(GAMMA, XV1, XV2, XVP1, RV):
 
     return np.array([U, V, W])
 
+
 def downstreamLine(r, theta, chord, twist, Uax, Utan, R, Loutlet, dx):
     # this function discretizes a vorticity line
     N = int((Loutlet*R - chord)/ dx) # number of points along each line
@@ -188,6 +143,7 @@ def downstreamLine(r, theta, chord, twist, Uax, Utan, R, Loutlet, dx):
     thetas[2:] = thetas[1] + (np.arange(1,N-1) * dtheta)
     coords = np.vstack([xs, rs, thetas])
     return coords #[x,r,theta]
+
 
 def cyl2cart(arr): # array must be shaped as [ndim, npoints], with ndim = [x r theta]
     if arr.ndim == 1:

@@ -28,9 +28,9 @@ U_inf = 10  # unperturbed wind speed in m/s
 N_B = 3 # number of blades
 
 # Lifting line model inputs
-Ncp = 8 # number of segments per blade = number of control points, don't go above 25
+Ncp = 10 # number of segments per blade = number of control points, don't go above 25
 psi =  np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radians
-Loutlet = 0.7 # the distance from the rotor  to the domain boundary, in rotor diameters
+Loutlet = 2 # the distance from the rotor to the domain boundary, in rotor diameters
 dx = 0.15 # discretization time step for the vortex ring.
 spacing = 1 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction?
@@ -48,9 +48,6 @@ polar_CL = data1['cl'][:]
 polar_CD = data1['cd'][:]
 
 '''1. Run the BEM model for the inputs '''
-# TSR_distribution = np.linspace(4,10,24)
-CT_distribution = []
-CP_distribution = []
 results = np.zeros([len(mu)-1, 11])
 
 Omega = U_inf * TSR / R
@@ -75,8 +72,9 @@ if averageFactor == 1:
 chord_distribution = 3 * (1 - mu) + 1 # meters
 delta_r = (mu[1:] - mu[:-1]) * R
 CT = np.sum(delta_r * df_axial_BEM[1:] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+print('CT BEM = ' + str(CT))
 CP = np.sum(delta_r * df_tan_BEM[1:] * mu[1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
-
+print('CP BEM = ' + str(CP))
 
 class VortexRing:
         def __init__(self, Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec):   
@@ -217,54 +215,64 @@ while diff > tol:
 
 # Validation plots
 print("Solution converged")
-fig1 = plt.figure(figsize=(8, 4))
-plt.title('Converged circulation solution')
-fac = np.pi * U_inf**2 / (Omega*N_B)
-plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_1 /(\pi U^2 / \Omega N_B))$')
-plt.plot(controlPoints['r'][Ncp:2*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_2 /(\pi U^2 / \Omega N_B))$')
-plt.plot(controlPoints['r'][2*Ncp:3*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_3 /(\pi U^2 / \Omega N_B))$')
-plt.plot(mu, gamma_BEM/fac, label='BEM Solution')
-plt.xlabel(r'$r/R$')
-plt.legend()
-plt.grid()
-plt.savefig("figures/circulation_converged",bbox_inches='tight')
+#fig1 = plt.figure(figsize=(8, 4))
+#plt.title('Converged circulation solution')
+#fac = np.pi * U_inf**2 / (Omega*N_B)
+#plt.plot(controlPoints['r'][0:Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_1 /(\pi U^2 / \Omega N_B))$')
+#plt.plot(controlPoints['r'][Ncp:2*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_2 /(\pi U^2 / \Omega N_B))$')
+#plt.plot(controlPoints['r'][2*Ncp:3*Ncp]/R,controlPoints['gamma'][0:Ncp]/fac,label=r'$\Gamma_3 /(\pi U^2 / \Omega N_B))$')
+#plt.plot(mu, gamma_BEM/fac, label='BEM Solution')
+#plt.xlabel(r'$r/R$')
+#plt.legend()
+#plt.grid()
+#plt.savefig("figures/circulation_converged",bbox_inches='tight')
 # should be periodic and the same, as the norm of a vector is the first invariant :)
 # plt.plot(np.linalg.norm(controlPoints["Uin"],axis=0))
 # plt.plot(np.linalg.norm(controlPoints["Uin_blade"],axis=0))
 
+mu_LLT = controlPoints['r'][0:Ncp]/R
+
+fig1 = plt.figure(figsize=(8, 4))
+plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+plt.plot(mu_LLT, np.rad2deg(controlPoints['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
+plt.plot(mu, alpha_BEM, '--k', label=r'$\alpha_{BEM}$')
+plt.plot(mu_LLT, np.rad2deg(controlPoints['phi'][0:Ncp]), '-r', label=r'$\phi_{LLT}$')
+plt.plot(mu, np.rad2deg(phi_BEM), '--r', label=r'$\phi_{BEM}$')
+plt.xlabel(r'$r/R$')
+plt.legend()
+plt.grid()
+
 fig2 = plt.figure(figsize=(8, 4))
-plt.title('Angle of Attack')
-plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['alpha'][0:Ncp]),label=r'$\alpha \ [deg]$')
-plt.plot(mu, alpha_BEM, label='BEM Solution')
+plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
+fac = np.pi * U_inf**2 / (Omega*N_B)
+plt.plot(mu_LLT,controlPoints['gamma'][0:Ncp]/fac, '-k', label='LLT Solution')
+plt.plot(mu, gamma_BEM/fac, '--k', label='BEM Solution')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
 
 fig3 = plt.figure(figsize=(8, 4))
-plt.title('Inflow Angle')
-plt.plot(controlPoints['r'][0:Ncp]/R,np.rad2deg(controlPoints['phi'][0:Ncp]),label=r'$\phi \ [deg]$')
-plt.plot(mu, phi_BEM, label='BEM Solution')
+plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
+fac = 0.5 * rho * U_inf**2 * R
+plt.plot(mu_LLT, df_axial[0:Ncp] / fac,'-k', label=r'$dT_{LLT}$')
+plt.plot(mu, df_axial_BEM / fac, '--k', label=r'$dT_{BEM}$')
+plt.plot(mu_LLT, df_tan[0:Ncp] / fac, '-r', label=r'$dQ_{LLT}$')
+plt.plot(mu, df_tan_BEM / fac, '--r', label=r'$dQ_{BEM}$')
 plt.xlabel(r'$r/R$')
 plt.legend()
 plt.grid()
 
-fig3 = plt.figure(figsize=(8, 4))
-plt.title('Axial Loading')
-plt.plot(controlPoints['r'][0:Ncp]/R, df_axial[0:Ncp],label=r'$\phi \ [deg]$')
-plt.plot(mu, df_axial_BEM, label='BEM Solution')
-plt.xlabel(r'$r/R$')
-plt.legend()
-plt.grid()
+#plt.show()
 
-fig3 = plt.figure(figsize=(8, 4))
-plt.title('Tangential Loading')
-plt.plot(controlPoints['r'][0:Ncp]/R, df_tan[0:Ncp],label=r'$\phi \ [deg]$')
-plt.plot(mu, df_tan_BEM, label='BEM Solution')
-plt.xlabel(r'$r/R$')
-plt.legend()
-plt.grid()
+print('CT BEM = ' + str(CT))
+print('CP BEM = ' + str(CP))
 
-plt.show()
+delta_r = (mu_LLT[1:] - mu_LLT[:-1]) * R
+CT = np.sum(delta_r * df_axial[1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+CP = np.sum(delta_r * df_tan[1:Ncp] * mu_LLT[1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+
+print('CT LLT = ' + str(CT))
+print('CP LLT = ' + str(CP))
 
 #fig3 = plt.figure(2,constrained_layout=True)
 #ax = plt.axes(projection='3d')
