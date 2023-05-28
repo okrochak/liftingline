@@ -263,13 +263,36 @@ if choice == '1':
 
 
 if choice == '2':
-        U_inf = [5,10,20] # freestream velocity
+        U_inf = [5,10,20] # freestream velocity vector
+
+        vortex = []
+        control = []
+        axial = []
+        tan = []
 
         for i in range(len(U_inf)):
                 # Compute Lifting Line Solution
-                [vortexSystem[{i}],controlPoints[i,:],df_axial[i],df_tan[i]] = fcn.lifting_line(spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf[i],a_axial,Omega,a_tan,psi,VortexRing,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex)
-
+                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf[i],a_axial,Omega,a_tan,psi,VortexRing,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex)
+                vortex.append(vortexSystem)
+                control.append(controlPoints)
+                axial.append(df_axial)
+                tan.append(df_tan)
 
                 # Validation plots
                 print('Solution ' + str(i) + 'converged')
+
+        mu_LLT = controlPoints['r'][0:Ncp]/R
+
+        fig1 = plt.figure(figsize=(8, 4))
+        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.plot(mu_LLT, np.rad2deg(control[0]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
+        plt.plot(mu_LLT, np.rad2deg(control[1]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
+        plt.plot(mu_LLT, np.rad2deg(control[2]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
+        plt.plot(mu, alpha_BEM, '--k', label=r'$\alpha_{BEM}$')
+        plt.plot(mu_LLT, np.rad2deg(control[0]['phi'][0:Ncp]), '-r', label=r'$\phi_{LLT}$')
+        plt.plot(mu, np.rad2deg(phi_BEM), '--r', label=r'$\phi_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+        plt.show()
        
