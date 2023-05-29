@@ -188,11 +188,6 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
                 self.thetaVec = np.cross(self.radVec.flatten(),self.xVec.flatten())  # unit vector aligned with the local angle thet
 
     
-    
-    
-    
-    
-    
     if averageFactor == 1:
         a_axial[:] = np.mean(a_axial); a_tan[:] = np.mean(a_tan)
 
