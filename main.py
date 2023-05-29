@@ -33,7 +33,7 @@ psi =  np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radia
 Loutlet = 2 # the distance from the rotor to the domain boundary, in rotor diameters
 dx = 0.15 # discretization time step for the vortex ring.
 spacing = 1 # 0 - regular, 1 -  cosine
-averageFactor = 1 # average the induction factors in radial direction?
+averageFactor = 0 # average the induction factors in radial direction? 0 - no, 1 - yes
 convFac = 0.95 # what part of original guess to take - higher is more stable ,  
 rho = 1.225
 mu_tip = 1
@@ -67,8 +67,6 @@ df_axial_BEM = results[:,5]
 df_tan_BEM = results[:,6] 
 gamma_BEM = results[:,7] 
 alpha_BEM = results[:,10]
-if averageFactor == 1:
-        a_axial[:] = np.mean(a_axial); a_tan[:] = np.mean(a_tan)
 chord_distribution = 3 * (1 - mu) + 1 # meters
 delta_r = (mu[1:] - mu[:-1]) * R
 CT = np.sum(delta_r * df_axial_BEM[1:] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
@@ -77,39 +75,39 @@ CP = np.sum(delta_r * df_tan_BEM[1:] * mu[1:] * N_B * R * Omega / (0.5 * U_inf *
 print('CP BEM = ' + str(CP))
 
 
-class VortexRing:
-        def __init__(self, Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec):   
-                print("Initialized a new VortexRing object")
-                self.r = Rvec # position closest to the hub / closest to the tip
-                self.theta = theta
-                self.alpha = alphaVec # angle of attack
-                self.chord = chordVec # chord length
-                self.Uax = UaxVec # downstream axial velocity
-                self.Utan = UtanVec # tangential downstream velocity
-                self.Gamma = 1 # circulation acting on this segment
-                twist = np.deg2rad(14 * (1 - (Rvec)/R) - pitch)  # twist in rad
-                self.twist = np.mean(twist)
-                # define the downstream circulation lines
-                self.coords_cyl = np.hstack((np.flip(fcn.downstreamLine(Rvec[0], theta, chordVec[0], twist[0], UaxVec[0], UtanVec[0], R, Loutlet, dx),1), \
-                                             fcn.downstreamLine(Rvec[1], theta, chordVec[1], twist[1], UaxVec[1], UtanVec[1], R, Loutlet, dx)))
-                self.coords_cart = fcn.cyl2cart(self.coords_cyl)
-                self.control_point = fcn.cyl2cart(np.array([[0*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
-                self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
-                                      [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
-                radVec = fcn.cyl2cart(np.array([0, self.r[1], theta])) - fcn.cyl2cart(np.array([0, self.r[0], theta])) #  vector in radial direction x r theta
-                
-                theta1c = theta - np.sin(twist)*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
-                
-                # chordVec = fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) - fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) 
-                self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
-                # self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
-                self.xVec = np.array([1, 0, 0]) # unit vector in x-direction
-                self.thetaVec = np.cross(self.radVec.flatten(),self.xVec.flatten())  # unit vector aligned with the local angle thet
+#class VortexRing:
+#        def __init__(self, Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec):   
+#                print("Initialized a new VortexRing object")
+#                self.r = Rvec # position closest to the hub / closest to the tip
+#                self.theta = theta
+#                self.alpha = alphaVec # angle of attack
+#                self.chord = chordVec # chord length
+#                self.Uax = UaxVec # downstream axial velocity
+#                self.Utan = UtanVec # tangential downstream velocity
+#                self.Gamma = 1 # circulation acting on this segment
+#                twist = np.deg2rad(14 * (1 - (Rvec)/R) - pitch)  # twist in rad
+#                self.twist = np.mean(twist)
+#                # define the downstream circulation lines
+#                self.coords_cyl = np.hstack((np.flip(fcn.downstreamLine(Rvec[0], theta, chordVec[0], twist[0], UaxVec[0], UtanVec[0], R, Loutlet, dx),1), \
+#                                             fcn.downstreamLine(Rvec[1], theta, chordVec[1], twist[1], UaxVec[1], UtanVec[1], R, Loutlet, dx)))
+#                self.coords_cart = fcn.cyl2cart(self.coords_cyl)
+#                self.control_point = fcn.cyl2cart(np.array([[0*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
+#                self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
+#                                      [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
+#                radVec = fcn.cyl2cart(np.array([0, self.r[1], theta])) - fcn.cyl2cart(np.array([0, self.r[0], theta])) #  vector in radial direction x r theta
+#                
+#                theta1c = theta - np.sin(twist)*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
+#                
+#                # chordVec = fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) - fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) 
+#                self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
+#                # self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
+#                self.xVec = np.array([1, 0, 0]) # unit vector in x-direction
+#                self.thetaVec = np.cross(self.radVec.flatten(),self.xVec.flatten())  # unit vector aligned with the local angle thet
 
 
 # Present options to user
 print('1 - Lifting Line Solution')
-print('2 - Variable U_inf')
+print('2 - Variable Convection Speed of Frozen Wake')
 print('3 - Blade Discretisation - Regular/Cosine')
 print('4 - Wake Discretisation')
 print('5 - Wake Length')
@@ -118,9 +116,12 @@ choice = input('Select an option: ')
 
 
 
+
+
+
 if choice == '1':
         # Compute Lifting Line Solution
-        [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,VortexRing,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex)
+        [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
 
 
         # Validation plots
@@ -262,37 +263,254 @@ if choice == '1':
 
 
 
+
+
+
 if choice == '2':
-        U_inf = [5,10,20] # freestream velocity vector
+        averageFactor = [0,1] # induction factors average - 0: non-averaged, 1: averaged
 
         vortex = []
         control = []
         axial = []
         tan = []
+        mu_LL = []
 
-        for i in range(len(U_inf)):
+        for i in range(len(averageFactor)):
+                
                 # Compute Lifting Line Solution
-                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf[i],a_axial,Omega,a_tan,psi,VortexRing,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex)
+                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor[i],spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
                 vortex.append(vortexSystem)
                 control.append(controlPoints)
                 axial.append(df_axial)
                 tan.append(df_tan)
 
                 # Validation plots
-                print('Solution ' + str(i) + 'converged')
+                print('Solution ' + str(i+1) + ' converged')
 
-        mu_LLT = controlPoints['r'][0:Ncp]/R
+                mu_LLT = control[i]['r'][0:Ncp]/R
+                mu_LL.append(mu_LLT)
 
         fig1 = plt.figure(figsize=(8, 4))
         plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
-        plt.plot(mu_LLT, np.rad2deg(control[0]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
-        plt.plot(mu_LLT, np.rad2deg(control[1]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
-        plt.plot(mu_LLT, np.rad2deg(control[2]['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
-        plt.plot(mu, alpha_BEM, '--k', label=r'$\alpha_{BEM}$')
-        plt.plot(mu_LLT, np.rad2deg(control[0]['phi'][0:Ncp]), '-r', label=r'$\phi_{LLT}$')
-        plt.plot(mu, np.rad2deg(phi_BEM), '--r', label=r'$\phi_{BEM}$')
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT} - non-averaged$')
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT} - averaged$')
+        plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT} - non-averaged$')
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT} - averaged$')
+        plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
         plt.xlabel(r'$r/R$')
         plt.legend()
         plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
+        fac = np.pi * U_inf**2 / (Omega*N_B)
+        plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label='LLT - non-averaged')
+        plt.plot(mu_LL[1],control[1]['gamma'][0:Ncp]/fac, '-g', label='LLT - averaged')
+        plt.plot(mu, gamma_BEM/fac, '-k', label='BEM Solution')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig3 = plt.figure(figsize=(8, 4))
+        plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
+        fac = 0.5 * rho * U_inf**2 * R
+        plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}$ - non-averaged')
+        plt.plot(mu_LL[1], axial[1][0:Ncp] / fac,'-g', label=r'$dT_{LLT}$ - averaged')
+        plt.plot(mu, df_axial_BEM / fac, '-k', label=r'$dT_{BEM}$')
+        plt.plot(mu_LL[0], tan[0][0:Ncp] / fac, '--r', label=r'$dQ_{LLT}$ - non-averaged')
+        plt.plot(mu_LL[1], tan[1][0:Ncp] / fac, '--g', label=r'$dQ_{LLT}$ - averaged')
+        plt.plot(mu, df_tan_BEM / fac, '--k', label=r'$dQ_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
         plt.show()
+
+        print('CT BEM = ' + str(CT))
+        print('CP BEM = ' + str(CP))
+
+        delta_r_nav = (mu_LL[0][1:] - mu_LL[0][:-1]) * R
+        delta_r_av = (mu_LL[1][1:] - mu_LL[1][:-1]) * R
+        CT_nav = np.sum(delta_r_nav * axial[0][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_nav = np.sum(delta_r_nav * tan[0][1:Ncp] * mu_LL[0][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+        CT_av = np.sum(delta_r_av * axial[1][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_av = np.sum(delta_r_av * tan[1][1:Ncp] * mu_LL[1][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+
+        print('CT LLT non_averaged = ' + str(CT_nav))
+        print('CT LLT averaged = ' + str(CT_av))
+        print('CP LLT non_averaged = ' + str(CP_nav))
+        print('CP LLT averaged = ' + str(CP_av))
+
+
+
+
+
+
+if choice == '3':
+        spacing = [0,1] # induction factors average - 0: non-averaged, 1: averaged
+
+        vortex = []
+        control = []
+        axial = []
+        tan = []
+        mu_LL = []
+
+        for i in range(len(spacing)):
+                
+                # Compute Lifting Line Solution
+                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing[i],mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
+                vortex.append(vortexSystem)
+                control.append(controlPoints)
+                axial.append(df_axial)
+                tan.append(df_tan)
+
+                # Validation plots
+                print('Solution ' + str(i+1) + ' converged')
+
+                mu_LLT = control[i]['r'][0:Ncp]/R
+                mu_LL.append(mu_LLT)
+
+        fig1 = plt.figure(figsize=(8, 4))
+        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT} - regular$')
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT} - cosine$')
+        plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT} - regular$')
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT} - cosine$')
+        plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
+        fac = np.pi * U_inf**2 / (Omega*N_B)
+        plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label='LLT - regular')
+        plt.plot(mu_LL[1],control[1]['gamma'][0:Ncp]/fac, '-g', label='LLT - cosine')
+        plt.plot(mu, gamma_BEM/fac, '-k', label='BEM Solution')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig3 = plt.figure(figsize=(8, 4))
+        plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
+        fac = 0.5 * rho * U_inf**2 * R
+        plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}$ - regular')
+        plt.plot(mu_LL[1], axial[1][0:Ncp] / fac,'-g', label=r'$dT_{LLT}$ - cosine')
+        plt.plot(mu, df_axial_BEM / fac, '-k', label=r'$dT_{BEM}$')
+        plt.plot(mu_LL[0], tan[0][0:Ncp] / fac, '--r', label=r'$dQ_{LLT}$ - regular')
+        plt.plot(mu_LL[1], tan[1][0:Ncp] / fac, '--g', label=r'$dQ_{LLT}$ - cosine')
+        plt.plot(mu, df_tan_BEM / fac, '--k', label=r'$dQ_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        plt.show()
+
+        print('CT BEM = ' + str(CT))
+        print('CP BEM = ' + str(CP))
+
+        delta_r_reg = (mu_LL[0][1:] - mu_LL[0][:-1]) * R
+        delta_r_cos = (mu_LL[1][1:] - mu_LL[1][:-1]) * R
+        CT_reg = np.sum(delta_r_reg * axial[0][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_reg = np.sum(delta_r_reg * tan[0][1:Ncp] * mu_LL[0][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+        CT_cos = np.sum(delta_r_cos * axial[1][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_cos = np.sum(delta_r_cos * tan[1][1:Ncp] * mu_LL[1][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+
+        print('CT LLT regular = ' + str(CT_reg))
+        print('CT LLT cosine = ' + str(CT_cos))
+        print('CP LLT regular = ' + str(CP_reg))
+        print('CP LLT cosine = ' + str(CP_cos))
+
+
+
+
+
+
+if choice == '5':
+        Loutlet = [0.5,2,5] # induction factors average - 0: non-averaged, 1: averaged
+
+        vortex = []
+        control = []
+        axial = []
+        tan = []
+        mu_LL = []
+
+        for i in range(len(Loutlet)):
+                
+                # Compute Lifting Line Solution
+                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet[i],dx)
+                vortex.append(vortexSystem)
+                control.append(controlPoints)
+                axial.append(df_axial)
+                tan.append(df_tan)
+
+                # Validation plots
+                print('Solution ' + str(i+1) + ' converged')
+
+                mu_LLT = control[i]['r'][0:Ncp]/R
+                mu_LL.append(mu_LLT)
+
+        fig1 = plt.figure(figsize=(8, 4))
+        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
+        plt.plot(mu_LL[2], np.rad2deg(control[2]['alpha'][0:Ncp]), '-b',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
+        plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
+        plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
+        plt.plot(mu_LL[2], np.rad2deg(control[2]['phi'][0:Ncp]), '--b', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
+        plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
+        fac = np.pi * U_inf**2 / (Omega*N_B)
+        plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label=r'$L_{wake} =$ %.1fD' %Loutlet[0])
+        plt.plot(mu_LL[1],control[1]['gamma'][0:Ncp]/fac, '-g', label=r'$L_{wake} =$ %.1fD' %Loutlet[1])
+        plt.plot(mu_LL[2],control[2]['gamma'][0:Ncp]/fac, '-b', label=r'$L_{wake} =$ %.1fD' %Loutlet[2])
+        plt.plot(mu, gamma_BEM/fac, '-k', label='BEM Solution')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig3 = plt.figure(figsize=(8, 4))
+        plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
+        fac = 0.5 * rho * U_inf**2 * R
+        plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
+        plt.plot(mu_LL[1], axial[1][0:Ncp] / fac,'-g', label=r'$dT_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
+        plt.plot(mu_LL[2], axial[2][0:Ncp] / fac,'-b', label=r'$dT_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
+        plt.plot(mu, df_axial_BEM / fac, '-k', label=r'$dT_{BEM}$')
+        plt.plot(mu_LL[0], tan[0][0:Ncp] / fac, '--r', label=r'$dQ_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
+        plt.plot(mu_LL[1], tan[1][0:Ncp] / fac, '--g', label=r'$dQ_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
+        plt.plot(mu_LL[2], tan[2][0:Ncp] / fac, '--b', label=r'$dQ_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
+        plt.plot(mu, df_tan_BEM / fac, '--k', label=r'$dQ_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        plt.show()
+
+        print('CT BEM = ' + str(CT))
+        print('CP BEM = ' + str(CP))
+
+        delta_r_1 = (mu_LL[0][1:] - mu_LL[0][:-1]) * R
+        delta_r_2 = (mu_LL[1][1:] - mu_LL[1][:-1]) * R
+        delta_r_3 = (mu_LL[2][1:] - mu_LL[2][:-1]) * R
+        CT_1 = np.sum(delta_r_1 * axial[0][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_2 = np.sum(delta_r_1 * tan[0][1:Ncp] * mu_LL[0][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+        CT_3 = np.sum(delta_r_2 * axial[1][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_1 = np.sum(delta_r_2 * tan[1][1:Ncp] * mu_LL[1][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+        CT_2 = np.sum(delta_r_3 * axial[2][1:Ncp] * N_B / (0.5 * U_inf ** 2 * np.pi * R ** 2))
+        CP_3 = np.sum(delta_r_3 * tan[2][1:Ncp] * mu_LL[2][1:] * N_B * R * Omega / (0.5 * U_inf ** 3 * np.pi * R ** 2))
+
+        print('CT LLT 0.5D = ' + str(CT_1))
+        print('CT LLT 2D = ' + str(CT_2))
+        print('CT LLT 5D = ' + str(CT_3))
+        print('CP LLT 0.5D = ' + str(CP_1))
+        print('CP LLT 2D = ' + str(CP_2))
+        print('CP LLT 5D = ' + str(CP_3))
        
