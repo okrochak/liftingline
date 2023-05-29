@@ -87,7 +87,7 @@ print('2 - Variable Convection Speed of Frozen Wake')
 print('3 - Blade Discretisation - Regular/Cosine')
 print('4 - Azimuthal Discretisation')
 print('5 - Wake Length')
-print('6 - Impermeability Boundary Condition')
+#print('6 - Impermeability Boundary Condition')
 
 choice = input('Select an option: ')
 
@@ -272,10 +272,16 @@ elif choice == '2':
                 mu_LL.append(mu_LLT)
 
         fig1 = plt.figure(figsize=(8, 4))
-        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.title(r'Angle of Attack for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT} - non-averaged$')
         plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT} - averaged$')
         plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Inflow Angle for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT} - non-averaged$')
         plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT} - averaged$')
         plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
@@ -283,7 +289,7 @@ elif choice == '2':
         plt.legend()
         plt.grid()
 
-        fig2 = plt.figure(figsize=(8, 4))
+        fig3 = plt.figure(figsize=(8, 4))
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label='LLT - non-averaged')
@@ -293,7 +299,7 @@ elif choice == '2':
         plt.legend()
         plt.grid()
 
-        fig3 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
         fac = 0.5 * rho * U_inf**2 * R
         plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}$ - non-averaged')
@@ -350,10 +356,16 @@ elif choice == '3':
                 mu_LL.append(mu_LLT)
 
         fig1 = plt.figure(figsize=(8, 4))
-        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.title(r'Angle of Attack for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT} - regular$')
         plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT} - cosine$')
         plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Inflow Angle for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT} - regular$')
         plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT} - cosine$')
         plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
@@ -361,7 +373,7 @@ elif choice == '3':
         plt.legend()
         plt.grid()
 
-        fig2 = plt.figure(figsize=(8, 4))
+        fig3 = plt.figure(figsize=(8, 4))
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label='LLT - regular')
@@ -371,7 +383,7 @@ elif choice == '3':
         plt.legend()
         plt.grid()
 
-        fig3 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
         fac = 0.5 * rho * U_inf**2 * R
         plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}$ - regular')
@@ -428,11 +440,17 @@ elif choice == '4':
                 mu_LL.append(mu_LLT)
 
         fig1 = plt.figure(figsize=(8, 4))
-        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.title(r'Angle of Attack for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp[0]]), '-r',label=r'$\alpha_{LLT}: N_{cp} =$ %.d' %Ncp[0])
         plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp[1]]), '-g',label=r'$\alpha_{LLT}: N_{cp} =$ %.d' %Ncp[1])
         plt.plot(mu_LL[2], np.rad2deg(control[2]['alpha'][0:Ncp[2]]), '-b',label=r'$\alpha_{LLT}: N_{cp} =$ %.d' %Ncp[2])
         plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Inflow Angle for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp[0]]), '--r', label=r'$\phi_{LLT}: N_{cp} =$ %.d' %Ncp[0])
         plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp[1]]), '--g', label=r'$\phi_{LLT}: N_{cp} =$ %.d' %Ncp[1])
         plt.plot(mu_LL[2], np.rad2deg(control[2]['phi'][0:Ncp[2]]), '--b', label=r'$\phi_{LLT}: N_{cp} =$ %.d' %Ncp[2])
@@ -441,7 +459,7 @@ elif choice == '4':
         plt.legend()
         plt.grid()
 
-        fig2 = plt.figure(figsize=(8, 4))
+        fig3 = plt.figure(figsize=(8, 4))
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp[0]]/fac, '-r', label=r'$N_{cp} =$ %.d' %Ncp[0])
@@ -452,7 +470,7 @@ elif choice == '4':
         plt.legend()
         plt.grid()
 
-        fig3 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
         fac = 0.5 * rho * U_inf**2 * R
         plt.plot(mu_LL[0], axial[0][0:Ncp[0]] / fac,'-r', label=r'$dT_{LLT}: N_{cp} =$ %.d' %Ncp[0])
@@ -516,11 +534,17 @@ elif choice == '5':
                 mu_LL.append(mu_LLT)
 
         fig1 = plt.figure(figsize=(8, 4))
-        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.title(r'Angle of Attack for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['alpha'][0:Ncp]), '-r',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
         plt.plot(mu_LL[1], np.rad2deg(control[1]['alpha'][0:Ncp]), '-g',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
         plt.plot(mu_LL[2], np.rad2deg(control[2]['alpha'][0:Ncp]), '-b',label=r'$\alpha_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
         plt.plot(mu, alpha_BEM, '-k', label=r'$\alpha_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+
+        fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Inflow Angle for $\lambda=$'+str(TSR))
         plt.plot(mu_LL[0], np.rad2deg(control[0]['phi'][0:Ncp]), '--r', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
         plt.plot(mu_LL[1], np.rad2deg(control[1]['phi'][0:Ncp]), '--g', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[1])
         plt.plot(mu_LL[2], np.rad2deg(control[2]['phi'][0:Ncp]), '--b', label=r'$\phi_{LLT}: L_{wake} =$ %.1fD' %Loutlet[2])
@@ -529,7 +553,7 @@ elif choice == '5':
         plt.legend()
         plt.grid()
 
-        fig2 = plt.figure(figsize=(8, 4))
+        fig3 = plt.figure(figsize=(8, 4))
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LL[0],control[0]['gamma'][0:Ncp]/fac, '-r', label=r'$L_{wake} =$ %.1fD' %Loutlet[0])
@@ -540,7 +564,7 @@ elif choice == '5':
         plt.legend()
         plt.grid()
 
-        fig3 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
         fac = 0.5 * rho * U_inf**2 * R
         plt.plot(mu_LL[0], axial[0][0:Ncp] / fac,'-r', label=r'$dT_{LLT}: L_{wake} =$ %.1fD' %Loutlet[0])
