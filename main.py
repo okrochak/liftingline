@@ -5,6 +5,7 @@ import pandas as pd
 import functions as fcn
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 from matplotlib.cm import ScalarMappable
+import time
 
 # Switch to TeX style for plots 
 ##plt.rcParams['text.usetex'] = True
@@ -51,6 +52,7 @@ polar_CD = data1['cd'][:]
 results = np.zeros([len(mu)-1, 11])
 
 Omega = U_inf * TSR / R
+start_time = time.time()
 # solve BEM model
 for i in range(len(mu)-1):
         chord = np.interp((mu[i] + mu[i+1]) / 2, mu, chord_distribution)
@@ -58,6 +60,10 @@ for i in range(len(mu)-1):
 
         results[i, :] = fcn.solveStreamtube(U_inf, mu[i], mu[i+1], delta_mu, mu_root, mu_tip, Omega,
                                                 R, N_B, chord, twist, polar_alpha, polar_CL, polar_CD)
+        
+end_time = time.time()
+elapsed_time = end_time - start_time
+print('BEM Elapsed Time: ' + str(elapsed_time))
 
 mu = results[:,0]
 a_axial = results[:,1]
@@ -112,16 +118,24 @@ if choice == '1':
         mu_LLT = controlPoints['r'][0:Ncp]/R
 
         fig1 = plt.figure(figsize=(8, 4))
-        plt.title(r'Angle of Attack and Inflow Angle for $\lambda=$'+str(TSR))
+        plt.title(r'Angle of Attack for $\lambda=$'+str(TSR))
         plt.plot(mu_LLT, np.rad2deg(controlPoints['alpha'][0:Ncp]), '-k',label=r'$\alpha_{LLT}$')
         plt.plot(mu, alpha_BEM, '--k', label=r'$\alpha_{BEM}$')
-        plt.plot(mu_LLT, np.rad2deg(controlPoints['phi'][0:Ncp]), '-r', label=r'$\phi_{LLT}$')
-        plt.plot(mu, np.rad2deg(phi_BEM), '--r', label=r'$\phi_{BEM}$')
         plt.xlabel(r'$r/R$')
         plt.legend()
         plt.grid()
+        plt.savefig("figures/AoA_LL",bbox_inches='tight')
 
         fig2 = plt.figure(figsize=(8, 4))
+        plt.title(r'Inflow Angle for $\lambda=$'+str(TSR))
+        plt.plot(mu_LLT, np.rad2deg(controlPoints['phi'][0:Ncp]), '-k', label=r'$\phi_{LLT}$')
+        plt.plot(mu, np.rad2deg(phi_BEM), '--k', label=r'$\phi_{BEM}$')
+        plt.xlabel(r'$r/R$')
+        plt.legend()
+        plt.grid()
+        plt.savefig("figures/inflow_angle_LL",bbox_inches='tight')
+
+        fig3 = plt.figure(figsize=(8, 4))
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LLT,controlPoints['gamma'][0:Ncp]/fac, '-k', label='LLT Solution')
@@ -129,8 +143,9 @@ if choice == '1':
         plt.xlabel(r'$r/R$')
         plt.legend()
         plt.grid()
+        plt.savefig("figures/circulation_LL",bbox_inches='tight')
 
-        fig3 = plt.figure(figsize=(8, 4))
+        fig4 = plt.figure(figsize=(8, 4))
         plt.title(r'Thrust and Azimuthal Loading, non-dimensioned by $\frac{1}{2} \rho U_\infty^2 R$ for $\lambda=$'+str(TSR))
         fac = 0.5 * rho * U_inf**2 * R
         plt.plot(mu_LLT, df_axial[0:Ncp] / fac,'-k', label=r'$dT_{LLT}$')
@@ -140,6 +155,7 @@ if choice == '1':
         plt.xlabel(r'$r/R$')
         plt.legend()
         plt.grid()
+        plt.savefig("figures/loadings_LL",bbox_inches='tight')
 
         #plt.show()
 
@@ -388,7 +404,7 @@ elif choice == '3':
 
 
 elif choice == '4':
-        Ncp = [5,10,20] # number of control points
+        Ncp = [5,10,15] # number of control points
 
         vortex = []
         control = []

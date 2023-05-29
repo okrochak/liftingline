@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import time
 
 def a_Glauert(CT):
     CT1 = 1.816
@@ -157,10 +158,10 @@ def cyl2cart(arr): # array must be shaped as [ndim, npoints], with ndim = [x r t
 
 
 def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx):
-
+    start_time = time.time()
     class VortexRing:
         def __init__(self, Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec):   
-                print("Initialized a new VortexRing object")
+                #print("Initialized a new VortexRing object")
                 self.r = Rvec # position closest to the hub / closest to the tip
                 self.theta = theta
                 self.alpha = alphaVec # angle of attack
@@ -192,7 +193,7 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
         a_axial[:] = np.mean(a_axial); a_tan[:] = np.mean(a_tan)
 
     ### Discretize the rotor blades
-    print("Initialize the vortexRing system")
+    #print("Initialize the vortexRing system")
     vortexSystem ={} 
     if spacing == 0:
             # regular spacing
@@ -221,7 +222,7 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
                     vortexSystem[f"inst{j}_{i}"] = VortexRing(Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec)
 
     # this must be close to zero, orthogonal vectors
-    print("Dot product of r_hat and x_hat:" , np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].xVec.flatten()))
+    #print("Dot product of r_hat and x_hat:" , np.dot(vortexSystem[f"inst{j}_{i}"].radVec.flatten(), vortexSystem[f"inst{j}_{i}"].xVec.flatten()))
 
     '''3. Assemble the induction matrix'''
     controlPoints = {}
@@ -257,7 +258,12 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
                                             x1 = vort_fil[:,n]; x2 = vort_fil[:,n+1]
                                             # finally assemble the induction matrix
                                             controlPoints["matrix"][c1,c2,:] += velocity3d_vortex_filament(1, x1, x2, coords_cp, r_vortex)
-    print("The Induction matrix is assembled")
+    #print("The Induction matrix is assembled")
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print('LLT Discretization Elapsed Time: ' + str(elapsed_time))
+    start_time = time.time()
 
     '''4. Begin the iteration loop '''
     diff = 1000
@@ -268,7 +274,7 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
     circulation_history = np.empty((N_B*Ncp,0))
     while diff > tol:
             # Calculate the new induction velocities
-            print("Iteration number:", iter)
+            #print("Iteration number:", iter)
             controlPoints["Uin"][0,:] = controlPoints["matrix"][:,:,0]@controlPoints["gamma"] # x-velocity
             controlPoints["Uin"][1,:] = controlPoints["matrix"][:,:,2]@controlPoints["gamma"] # y-velocity
             controlPoints["Uin"][2,:] = controlPoints["matrix"][:,:,1]@controlPoints["gamma"] # z-velocity, all in turbine (global) frame of reference
@@ -299,5 +305,9 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
             iter += 1
             if iter > Niter:
                     break
+            
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print('LLT Elapsed Time: ' + str(elapsed_time))
     
     return [vortexSystem,controlPoints,df_axial,df_tan]
