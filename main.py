@@ -75,41 +75,11 @@ CP = np.sum(delta_r * df_tan_BEM[1:] * mu[1:] * N_B * R * Omega / (0.5 * U_inf *
 print('CP BEM = ' + str(CP))
 
 
-#class VortexRing:
-#        def __init__(self, Rvec, theta, alphaVec, chordVec, UaxVec, UtanVec):   
-#                print("Initialized a new VortexRing object")
-#                self.r = Rvec # position closest to the hub / closest to the tip
-#                self.theta = theta
-#                self.alpha = alphaVec # angle of attack
-#                self.chord = chordVec # chord length
-#                self.Uax = UaxVec # downstream axial velocity
-#                self.Utan = UtanVec # tangential downstream velocity
-#                self.Gamma = 1 # circulation acting on this segment
-#                twist = np.deg2rad(14 * (1 - (Rvec)/R) - pitch)  # twist in rad
-#                self.twist = np.mean(twist)
-#                # define the downstream circulation lines
-#                self.coords_cyl = np.hstack((np.flip(fcn.downstreamLine(Rvec[0], theta, chordVec[0], twist[0], UaxVec[0], UtanVec[0], R, Loutlet, dx),1), \
-#                                             fcn.downstreamLine(Rvec[1], theta, chordVec[1], twist[1], UaxVec[1], UtanVec[1], R, Loutlet, dx)))
-#                self.coords_cart = fcn.cyl2cart(self.coords_cyl)
-#                self.control_point = fcn.cyl2cart(np.array([[0*0.5*(self.chord[0] + self.chord[1])], [0.5*(self.r[0] + self.r[1])], [theta] ]))
-#                self.blade = fcn.cyl2cart(np.array([[-0.25 * self.chord[0],-0.25 * self.chord[1], 0.75 * self.chord[1], 0.75 * self.chord[0]], \
-#                                      [self.r[0], self.r[1], self.r[1], self.r[0]], [theta, theta, theta, theta]])) 
-#                radVec = fcn.cyl2cart(np.array([0, self.r[1], theta])) - fcn.cyl2cart(np.array([0, self.r[0], theta])) #  vector in radial direction x r theta
-#                
-#                theta1c = theta - np.sin(twist)*np.mean(chordVec) / np.mean(Rvec) # theta coordinate of the TE.
-#                
-#                # chordVec = fcn.cyl2cart(np.array([np.cos(twist)*np.mean(chordVec), np.mean(Rvec), theta1c])) - fcn.cyl2cart(np.array([0, np.mean(Rvec), theta])) 
-#                self.radVec = radVec/np.linalg.norm(radVec) # unit vector in radial direction in system (turbine) coordinates
-#                # self.chordVec = chordVec/np.linalg.norm(chordVec) #  unit vector aligned with the local chord
-#                self.xVec = np.array([1, 0, 0]) # unit vector in x-direction
-#                self.thetaVec = np.cross(self.radVec.flatten(),self.xVec.flatten())  # unit vector aligned with the local angle thet
-
-
 # Present options to user
 print('1 - Lifting Line Solution')
 print('2 - Variable Convection Speed of Frozen Wake')
 print('3 - Blade Discretisation - Regular/Cosine')
-print('4 - Wake Discretisation')
+print('4 - Azimuthal Discretisation')
 print('5 - Wake Length')
 
 choice = input('Select an option: ')
