@@ -81,6 +81,7 @@ print('2 - Variable Convection Speed of Frozen Wake')
 print('3 - Blade Discretisation - Regular/Cosine')
 print('4 - Azimuthal Discretisation')
 print('5 - Wake Length')
+print('6 - Impermeability Boundary Condition')
 
 choice = input('Select an option: ')
 
@@ -230,7 +231,7 @@ if choice == '1':
 
 
 
-if choice == '2':
+elif choice == '2':
         averageFactor = [0,1] # induction factors average - 0: non-averaged, 1: averaged
 
         vortex = []
@@ -308,7 +309,7 @@ if choice == '2':
 
 
 
-if choice == '3':
+elif choice == '3':
         spacing = [0,1] # spacing - 0: regular, 1: cosine
 
         vortex = []
@@ -386,7 +387,7 @@ if choice == '3':
 
 
 
-if choice == '4':
+elif choice == '4':
         Ncp = [5,10,20] # number of control points
 
         vortex = []
@@ -474,7 +475,7 @@ if choice == '4':
 
 
 
-if choice == '5':
+elif choice == '5':
         Loutlet = [0.5,2,5] # length of the wake in rotor diameter
 
         vortex = []
