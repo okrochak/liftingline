@@ -199,7 +199,7 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
             # regular spacing
             vortexSystem["mu_coord"] = np.linspace(mu_root, mu_tip,Ncp + 1)
     elif spacing == 1:
-        # cosine spacing
+            # cosine spacing
             vortexSystem["mu_coord"] = mu_root + ((1 + np.flip(np.cos(np.linspace(0,np.pi,Ncp+1)))) / 2) * (mu_tip - mu_root)
     vortexSystem["mu"] = (vortexSystem["mu_coord"][1:] + vortexSystem["mu_coord"][:-1]) / 2
 
