@@ -33,7 +33,7 @@ Ncp = 10 # number of segments per blade = number of control points, don't go abo
 psi =  np.pi/11 # np.pi/3 # azimuthal position of the first rotor blade in radians
 Loutlet = 2 # the distance from the rotor to the domain boundary, in rotor diameters
 dx = 0.15 # discretization time step for the vortex ring.
-spacing = 1 # 0 - regular, 1 -  cosine
+spacing = 0 # 0 - regular, 1 -  cosine
 averageFactor = 1 # average the induction factors in radial direction? 0 - no, 1 - yes
 convFac = 0.95 # what part of original guess to take - higher is more stable ,  
 rho = 1.225
