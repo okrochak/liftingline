@@ -95,7 +95,7 @@ choice = input('Select an option: ')
 
 if choice == '1':
         # Compute Lifting Line Solution
-        [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
+        [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
 
 
         # Validation plots
@@ -139,6 +139,7 @@ if choice == '1':
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LLT,controlPoints['gamma'][0:Ncp]/fac, '-k', label='LLT Solution')
+        #plt.plot(mu_LLT,gamma_imp[0:Ncp]/fac, '-r', label='LLT Solution Imp')
         plt.plot(mu, gamma_BEM/fac, '--k', label='BEM Solution')
         plt.xlabel(r'$r/R$')
         plt.legend()
@@ -261,7 +262,7 @@ elif choice == '2':
         for i in range(len(averageFactor)):
                 
                 # Compute Lifting Line Solution
-                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor[i],spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
+                [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp] = fcn.lifting_line(averageFactor[i],spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
                 vortex.append(vortexSystem)
                 control.append(controlPoints)
                 axial.append(df_axial)
@@ -345,7 +346,7 @@ elif choice == '3':
         for i in range(len(spacing)):
                 
                 # Compute Lifting Line Solution
-                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing[i],mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
+                [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp] = fcn.lifting_line(averageFactor,spacing[i],mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
                 vortex.append(vortexSystem)
                 control.append(controlPoints)
                 axial.append(df_axial)
@@ -429,7 +430,7 @@ elif choice == '4':
         for i in range(len(Ncp)):
                 
                 # Compute Lifting Line Solution
-                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp[i],alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
+                [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp[i],alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet,dx)
                 vortex.append(vortexSystem)
                 control.append(controlPoints)
                 axial.append(df_axial)
@@ -523,7 +524,7 @@ elif choice == '5':
         for i in range(len(Loutlet)):
                 
                 # Compute Lifting Line Solution
-                [vortexSystem,controlPoints,df_axial,df_tan] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet[i],dx)
+                [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp] = fcn.lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Ncp,alpha_BEM,U_inf,a_axial,Omega,a_tan,psi,polar_alpha,polar_CL,polar_CD,N_B,convFac,r_vortex,pitch,Loutlet[i],dx)
                 vortex.append(vortexSystem)
                 control.append(controlPoints)
                 axial.append(df_axial)

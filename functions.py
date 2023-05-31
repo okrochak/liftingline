@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
+from scipy.linalg import solve
 
 def a_Glauert(CT):
     CT1 = 1.816
@@ -236,6 +237,7 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
     controlPoints["chord"] = np.empty((N_B*Ncp))
     controlPoints["twist"] = np.empty((N_B*Ncp))
     controlPoints["r"] = np.empty((N_B*Ncp))
+    controlPoints["normal"] = np.empty((3,N_B*Ncp))
 
     for j1 in range(N_B):
             for i1 in range(Ncp):
@@ -289,8 +291,8 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
             # And the angle of attack
             controlPoints["phi"] = np.arctan(controlPoints["Uin_blade"][0,:]/controlPoints["Uin_blade"][1,:])
             controlPoints["alpha"] = controlPoints["phi"] - controlPoints["twist"] # phi - twist
+            
             # Update the Gamma 
-
             CL = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CL)
             CD = np.interp(np.rad2deg(controlPoints["alpha"]), polar_alpha, polar_CD)
             L = 0.5 * controlPoints["|V|bl"] ** 2 * controlPoints["chord"] * CL
@@ -306,8 +308,17 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
             if iter > Niter:
                     break
             
+    # Compute normal vector in blade reference frame
+    norm = np.sqrt((np.cos(controlPoints["alpha"]))**2+(np.sin(controlPoints["alpha"]))**2) # determine norm of the vector            
+    controlPoints["normal"][0,:] = -np.sin(controlPoints["alpha"])/norm # x-component
+    controlPoints["normal"][1,:] = np.cos(controlPoints["alpha"])/norm # y-component
+    controlPoints["normal"][2,:] = np.zeros(N_B*Ncp) # z-component
+    b = -np.ones(N_B*Ncp)*U_inf*controlPoints["normal"][1,:]
+    gamma_imp = solve(controlPoints["matrix"][:,:,0],b)
+            
+    
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('LLT Elapsed Time: ' + str(elapsed_time))
     
-    return [vortexSystem,controlPoints,df_axial,df_tan]
+    return [vortexSystem,controlPoints,df_axial,df_tan,gamma_imp]
