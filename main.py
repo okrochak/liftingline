@@ -178,6 +178,7 @@ if choice == '1':
         #ax = plt.axes(projection='3d')
         #ax.quiver(controlPoints["coords"][:,0],controlPoints["coords"][:,1],controlPoints["coords"][:,2], \
         #          controlPoints["r_hat"][:,0], controlPoints["r_hat"][:,1], controlPoints["r_hat"][:,2])
+        fac = np.pi * U_inf**2 / (Omega*N_B)
         gamma = controlPoints["gamma"]/ fac
         gamma_norm = (gamma - gamma.min()) / (gamma.max() - gamma.min())
         # gamma_norm = gamma / fac
@@ -234,8 +235,9 @@ if choice == '1':
                 # the beam
                 ax.plot3D([0,0], [0, 0], [0, -50], 'gray', linewidth=10)
                 ax.set_xlabel('x [m]')
-                ax.set_ylabel('y [m]')
+                #ax.set_ylabel('y [m]')
                 ax.set_zlabel('z [m]')
+                ax.view_init(elev=0, azim=-90)
                 # ax.set_ylim([-R,R])
                 # ax.set_zlim([-R,R])
                 # ax.set_ylim(0, R/3)
