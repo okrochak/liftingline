@@ -139,7 +139,7 @@ if choice == '1':
         plt.title(r'Circulation distribution, non-dimensioned by $\frac{\pi U_\infty^2}{\Omega N_B}$ for $\lambda=$'+str(TSR))
         fac = np.pi * U_inf**2 / (Omega*N_B)
         plt.plot(mu_LLT,controlPoints['gamma'][0:Ncp]/fac, '-k', label='LLT Solution')
-        #plt.plot(mu_LLT,gamma_imp[0:Ncp]/fac, '-r', label='LLT Solution Imp')
+        plt.plot(mu_LLT,gamma_imp[0:Ncp]/fac, '-r', label='LLT Solution Imp')
         plt.plot(mu, gamma_BEM/fac, '--k', label='BEM Solution')
         plt.xlabel(r'$r/R$')
         plt.legend()

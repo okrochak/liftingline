@@ -238,6 +238,8 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
     controlPoints["twist"] = np.empty((N_B*Ncp))
     controlPoints["r"] = np.empty((N_B*Ncp))
     controlPoints["normal"] = np.empty((3,N_B*Ncp))
+    vel_vec = np.empty((3,N_B*Ncp))
+    b = np.empty((N_B*Ncp))
 
     for j1 in range(N_B):
             for i1 in range(Ncp):
@@ -308,13 +310,20 @@ def lifting_line(averageFactor,spacing,mu,mu_root,mu_tip,chord_distribution,R,Nc
             if iter > Niter:
                     break
             
-    # Compute normal vector in blade reference frame
-    norm = np.sqrt((np.cos(controlPoints["alpha"]))**2+(np.sin(controlPoints["alpha"]))**2) # determine norm of the vector            
-    controlPoints["normal"][0,:] = -np.sin(controlPoints["alpha"])/norm # x-component
-    controlPoints["normal"][1,:] = np.cos(controlPoints["alpha"])/norm # y-component
+    # Compute normal vector in blade reference frame            
+    controlPoints["normal"][0,:] = -np.sin(controlPoints["alpha"]) # x-component
+    controlPoints["normal"][1,:] = np.cos(controlPoints["alpha"]) # y-component
     controlPoints["normal"][2,:] = np.zeros(N_B*Ncp) # z-component
-    b = -np.ones(N_B*Ncp)*U_inf*controlPoints["normal"][1,:]
-    gamma_imp = solve(controlPoints["matrix"][:,:,0],b)
+    # Compute freestream velocity components in global reference frame
+    vel_vec[0,:] = U_inf*np.cos(controlPoints["phi"])
+    vel_vec[1,:] = U_inf*np.sin(controlPoints["phi"])
+    vel_vec[2,:] = np.zeros(N_B*Ncp)
+    # Compute gammas from impermiability condition
+    for i in range(len(vel_vec)):
+          b[i] = vel_vec[0,i]*controlPoints["normal"][0,i]+vel_vec[1,i]*controlPoints["normal"][1,i]+vel_vec[2,i]*controlPoints["normal"][2,i]
+    #b = -np.inner(vel_vec,controlPoints["normal"])
+    #b = -np.ones(N_B*Ncp)*U_inf*controlPoints["normal"][0,:]
+    gamma_imp = solve(controlPoints["matrix"][:,:,0],np.transpose(b))
             
     
     end_time = time.time()
